@@ -1,0 +1,140 @@
+---
+import { getSEO, formatPageTitle, type SEOProps } from '~/lib/seo';
+import { getPersonSchema } from '~/lib/schema';
+
+export interface Props extends Partial<SEOProps> {
+  title: string;
+  description: string;
+  lang?: 'en' | 'ur';
+}
+
+const { title, description, lang = 'en', ...seoProps } = Astro.props;
+
+const seo = getSEO({
+  title: formatPageTitle(title, 'Usman Ramzan'),
+  description,
+  url: Astro.url.href,
+  ...seoProps,
+});
+
+const personSchema = getPersonSchema({
+  name: 'Muhammad Usman Ramzan',
+  url: 'https://www.usmanramzan.ai',
+  jobTitle: 'Senior DevOps Engineer | CTO',
+  affiliation: { '@type': 'Organization', name: 'Urnlabs' },
+  sameAs: [
+    'https://www.linkedin.com/in/mramzan-pk',
+    'https://github.com/mramzan-pk',
+  ],
+});
+---
+
+<!doctype html>
+<html lang={lang} dir={lang === 'ur' ? 'rtl' : 'ltr'} class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={seo.description} />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    
+    <!-- SEO -->
+    <title>{seo.title}</title>
+    <link rel="canonical" href={seo.canonical} />
+    
+    <!-- Open Graph -->
+    <meta property="og:type" content={seo.openGraph.basic.type} />
+    <meta property="og:title" content={seo.openGraph.basic.title} />
+    <meta property="og:description" content={seo.openGraph.optional.description} />
+    <meta property="og:url" content={seo.openGraph.basic.url} />
+    <meta property="og:image" content={seo.openGraph.basic.image} />
+    <meta property="og:site_name" content="Usman Ramzan" />
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content={seo.twitter.card} />
+    <meta name="twitter:title" content={seo.twitter.title} />
+    <meta name="twitter:description" content={seo.twitter.description} />
+    <meta name="twitter:image" content={seo.twitter.image} />
+    
+    <!-- Language alternates -->
+    <link rel="alternate" hreflang="en" href={Astro.url.href.replace('/ur/', '/')} />
+    <link rel="alternate" hreflang="ur" href={Astro.url.href.includes('/ur/') ? Astro.url.href : Astro.url.href + 'ur/'} />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    
+    <!-- Urdu font -->
+    {lang === 'ur' && (
+      <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+      />
+    )}
+    
+    <!-- JSON-LD Schema -->
+    <script type="application/ld+json" set:html={JSON.stringify(personSchema)} />
+    
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+  </head>
+  <body class={`bg-primary-bg text-text-light antialiased ${lang === 'ur' ? 'font-arabic' : ''}`}>
+    <slot />
+    
+    <!-- Analytics -->
+    <script>
+      // Plausible analytics will be added here in production
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  .font-arabic {
+    font-family: 'Noto Sans Arabic', 'Inter', system-ui, sans-serif;
+  }
+  
+  code {
+    font-family: 'JetBrains Mono', monospace;
+  }
+  
+  /* Smooth scrolling */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+  
+  /* RTL support */
+  [dir="rtl"] {
+    text-align: right;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #1a1a1a;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #0072ff;
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #0056cc;
+  }
+</style>

@@ -1,0 +1,68 @@
+{
+  "mcpServers": {
+    "database": {
+      "command": "npx",
+      "args": ["@anthropic-ai/mcp-server-postgres"],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "postgresql://localhost:5432/urnlabs_dev"
+      }
+    },
+    "github": {
+      "command": "npx",
+      "args": ["@anthropic-ai/mcp-server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["@anthropic-ai/mcp-server-filesystem"],
+      "env": {
+        "ALLOWED_DIRECTORIES": ["/Users/muhammadusmanramzan/Desktop/work/urnlabs-ai/urnlabs"]
+      }
+    },
+    "slack": {
+      "command": "npx",
+      "args": ["@anthropic-ai/mcp-server-slack"],
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
+        "SLACK_TEAM_ID": "${SLACK_TEAM_ID}"
+      }
+    },
+    "monitoring": {
+      "command": "node",
+      "args": ["./packages/monitoring/src/mcp-server.js"],
+      "env": {
+        "MONITORING_API_KEY": "${MONITORING_API_KEY}"
+      }
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-puppeteer"]
+    },
+    "memory-bank": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-memory"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-playwright"]
+    },
+    "knowledge-graph": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-knowledge-graph"]
+    },
+    "duckduckgo": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-duckduckgo"]
+    },
+    "mcp-compass": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-compass"]
+    }
+  }
+}

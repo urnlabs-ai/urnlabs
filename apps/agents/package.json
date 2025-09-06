@@ -1,0 +1,44 @@
+{
+  "name": "@urnlabs/agents",
+  "version": "1.0.0",
+  "description": "Urnlabs AI Agent Service - Multi-agent orchestration and workflow execution",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc && tsc-alias",
+    "start": "node dist/server.js",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src --ext .ts,.js",
+    "lint:fix": "eslint src --ext .ts,.js --fix",
+    "typecheck": "tsc --noEmit",
+    "worker": "tsx src/worker.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.20.8",
+    "@fastify/websocket": "^10.0.1",
+    "@prisma/client": "^5.7.1",
+    "bull": "^4.12.2",
+    "bullmq": "^5.1.9",
+    "fastify": "^4.24.3",
+    "ioredis": "^5.3.2",
+    "openai": "^4.24.1",
+    "pino": "^8.17.2",
+    "ws": "^8.16.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/ws": "^8.5.10",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "@urnlabs/config": "workspace:*",
+    "eslint": "^8.56.0",
+    "tsc-alias": "^1.8.8",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10",
+    "vitest": "^1.1.0"
+  }
+}

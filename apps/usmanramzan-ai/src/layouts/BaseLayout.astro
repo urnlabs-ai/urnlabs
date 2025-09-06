@@ -1,0 +1,159 @@
+---
+import "../styles/global.css";
+
+export interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  canonical?: string;
+  noindex?: boolean;
+}
+
+const {
+  title = "Muhammad Usman Ramzan - CTO & CEO | Infrastructure Engineering Leader",
+  description = "Co-founder & CTO at ePrecisio, CEO & Founder at URNLabs.ai. Senior Infrastructure Engineer with 5+ years experience in Kubernetes, cloud migration (AWS/OCI), and DevOps automation. CKAD certified.",
+  image = "/og-image.svg",
+  canonical,
+  noindex = false
+} = Astro.props;
+
+const canonicalURL = canonical || new URL(Astro.url.pathname, Astro.site);
+const socialImage = new URL(image, Astro.site);
+---
+
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href={canonicalURL} />
+    
+    <!-- SEO Meta Tags -->
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="keywords" content="Muhammad Usman Ramzan, CTO, CEO, Infrastructure Engineer, Kubernetes, CKAD, Cloud Migration, AWS, OCI, DevOps, ePrecisio, URNLabs, Multi-cloud Architecture, Container Orchestration" />
+    <meta name="author" content="Muhammad Usman Ramzan" />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:site_name" content="Muhammad Usman Ramzan" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content={canonicalURL} />
+    <meta property="twitter:title" content={title} />
+    <meta property="twitter:description" content={description} />
+    <meta property="twitter:image" content={socialImage} />
+    <meta property="twitter:creator" content="@usmanramzan" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link 
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" 
+      rel="stylesheet" 
+    />
+    
+    <!-- Theme Script (Prevent FOUC) -->
+    <script is:inline>
+      function getTheme() {
+        if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
+          return localStorage.getItem('theme');
+        }
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          return 'dark';
+        }
+        return 'light';
+      }
+      
+      const theme = getTheme();
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      
+      window.localStorage.setItem('theme', theme);
+    </script>
+    
+    <!-- Analytics -->
+    <!-- Google Analytics would go here -->
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Muhammad Usman Ramzan",
+        "url": "https://usmanramzan.ai",
+        "image": "https://usmanramzan.ai/profile.jpg",
+        "jobTitle": "Co-founder & CTO at ePrecisio, CEO & Founder at URNLabs.ai",
+        "worksFor": [
+          {
+            "@type": "Organization",
+            "name": "ePrecisio",
+            "description": "Co-founder & CTO"
+          },
+          {
+            "@type": "Organization", 
+            "name": "URNLabs.ai",
+            "description": "CEO & Founder"
+          }
+        ],
+        "description": "Infrastructure Engineering Leader with 5+ years experience in Kubernetes, cloud migration, and DevOps automation. CKAD certified.",
+        "sameAs": [
+          "https://github.com/muhammadusmanramzan",
+          "https://linkedin.com/in/muhammadusmanramzan",
+          "https://twitter.com/usmanramzan"
+        ],
+        "knowsAbout": [
+          "Kubernetes",
+          "Cloud Migration",
+          "Infrastructure Engineering", 
+          "DevOps",
+          "Container Orchestration",
+          "AWS",
+          "Oracle Cloud Infrastructure",
+          "Multi-cloud Architecture",
+          "Infrastructure as Code",
+          "Database Migration",
+          "Team Leadership"
+        ]
+      }
+    </script>
+  </head>
+  <body class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-body antialiased">
+    <div class="min-h-screen flex flex-col">
+      <slot />
+    </div>
+    
+    <!-- Theme Toggle Script -->
+    <script>
+      function toggleTheme() {
+        const theme = localStorage.getItem('theme') === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('theme', theme);
+        
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+      
+      // Bind to global window for component access
+      window.toggleTheme = toggleTheme;
+    </script>
+  </body>
+</html>

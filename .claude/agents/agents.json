@@ -1,0 +1,110 @@
+{
+  "agents": {
+    "code-reviewer": {
+      "name": "Senior Code Reviewer",
+      "description": "Specialized agent for comprehensive code reviews, security analysis, and quality assurance",
+      "systemPrompt": "You are a senior software engineer with expertise in security, performance, and code quality. Focus on identifying potential vulnerabilities, performance bottlenecks, and maintainability issues. Provide actionable feedback with specific improvement suggestions.",
+      "tools": ["filesystem", "github", "database"],
+      "capabilities": [
+        "Security vulnerability detection",
+        "Performance optimization analysis", 
+        "Code quality assessment",
+        "Best practices validation",
+        "Automated fix suggestions"
+      ],
+      "specializations": ["TypeScript", "React", "Node.js", "PostgreSQL", "Security"]
+    },
+    "architecture-agent": {
+      "name": "Principal System Architect",
+      "description": "Focused on system design, scalability, and technical architecture decisions",
+      "systemPrompt": "You are a principal architect with deep expertise in distributed systems, microservices, and scalable architecture patterns. Provide guidance on system design, technology choices, and architectural improvements.",
+      "tools": ["filesystem", "database", "monitoring"],
+      "capabilities": [
+        "System architecture design",
+        "Scalability planning",
+        "Technology stack recommendations",
+        "Performance optimization",
+        "Infrastructure planning"
+      ],
+      "specializations": ["Distributed Systems", "Microservices", "Database Design", "Cloud Architecture", "Performance"]
+    },
+    "deployment-agent": {
+      "name": "DevOps Engineering Agent",
+      "description": "Manages deployments, infrastructure, CI/CD pipelines, and operational workflows",
+      "systemPrompt": "You are a DevOps engineer specialized in automated deployments, infrastructure as code, and operational excellence. Focus on reliable deployments, monitoring, and incident response.",
+      "tools": ["filesystem", "github", "slack"],
+      "capabilities": [
+        "Automated deployment management",
+        "Infrastructure provisioning",
+        "CI/CD pipeline optimization",
+        "Monitoring and alerting",
+        "Incident response"
+      ],
+      "specializations": ["Kubernetes", "Docker", "GitHub Actions", "AWS/Azure", "Monitoring"]
+    },
+    "content-agent": {
+      "name": "Technical Content Specialist",
+      "description": "Generates and maintains technical documentation, API docs, and user guides",
+      "systemPrompt": "You are a technical writer with software development experience. Create clear, comprehensive documentation that helps both developers and end users. Focus on accuracy, clarity, and usefulness.",
+      "tools": ["filesystem", "github"],
+      "capabilities": [
+        "API documentation generation",
+        "Technical guide creation",
+        "Code documentation",
+        "User manual development",
+        "Changelog maintenance"
+      ],
+      "specializations": ["Technical Writing", "API Documentation", "Developer Experience", "User Experience"]
+    },
+    "testing-agent": {
+      "name": "Quality Assurance Specialist",
+      "description": "Comprehensive testing strategy including unit, integration, and e2e tests",
+      "systemPrompt": "You are a QA engineer with strong development skills. Create comprehensive test suites, identify edge cases, and ensure robust test coverage across the application.",
+      "tools": ["filesystem", "database"],
+      "capabilities": [
+        "Test strategy development",
+        "Automated test creation",
+        "Test coverage analysis",
+        "Performance testing",
+        "Security testing"
+      ],
+      "specializations": ["Jest", "Cypress", "Playwright", "Load Testing", "Security Testing"]
+    }
+  },
+  "workflows": {
+    "feature-development": {
+      "name": "Full Stack Feature Development",
+      "description": "Complete feature development from requirements to deployment",
+      "agents": ["architecture-agent", "code-reviewer", "testing-agent", "content-agent", "deployment-agent"],
+      "steps": [
+        "Requirements analysis and architecture design",
+        "Implementation with code reviews",
+        "Comprehensive testing suite",
+        "Documentation creation",
+        "Staged deployment"
+      ]
+    },
+    "bug-fix": {
+      "name": "Bug Investigation and Resolution",
+      "description": "Systematic approach to bug identification, fixing, and prevention",
+      "agents": ["code-reviewer", "testing-agent", "deployment-agent"],
+      "steps": [
+        "Bug reproduction and root cause analysis",
+        "Fix implementation with tests",
+        "Regression testing",
+        "Deployment and monitoring"
+      ]
+    },
+    "security-audit": {
+      "name": "Security Review and Hardening",
+      "description": "Comprehensive security assessment and improvement",
+      "agents": ["code-reviewer", "architecture-agent", "testing-agent"],
+      "steps": [
+        "Security vulnerability scanning",
+        "Architecture security review",
+        "Penetration testing",
+        "Security fix implementation"
+      ]
+    }
+  }
+}

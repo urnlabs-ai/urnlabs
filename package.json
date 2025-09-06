@@ -1,0 +1,32 @@
+{
+  "name": "urnlabs-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Marketing websites for Urnlabs and Usman Ramzan",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@10.15.0",
+  "scripts": {
+    "dev": "pnpm --parallel --recursive run dev",
+    "build": "pnpm --recursive run build",
+    "preview": "pnpm --parallel --recursive run preview",
+    "lint": "pnpm --recursive run lint",
+    "lint:fix": "pnpm --recursive run lint:fix",
+    "typecheck": "pnpm --recursive run typecheck",
+    "clean": "pnpm --recursive run clean && rm -rf node_modules",
+    "test": "pnpm --recursive run test"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.8.1",
+    "@typescript-eslint/parser": "^8.8.1",
+    "eslint": "^9.12.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-astro": "^1.2.4",
+    "prettier": "^3.3.3",
+    "prettier-plugin-astro": "^0.14.1",
+    "prettier-plugin-tailwindcss": "^0.6.8",
+    "typescript": "^5.6.3"
+  }
+}

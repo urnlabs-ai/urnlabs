@@ -1,0 +1,270 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import PersonalHero from '../components/PersonalHero.tsx';
+import ProjectsSection from '../components/ProjectsSection.astro';
+import SkillsSection from '../components/SkillsSection.astro';
+import ContactSection from '../components/ContactSection.astro';
+---
+
+<BaseLayout>
+  <Header />
+  
+  <main>
+    <!-- Hero Section -->
+    <PersonalHero client:load />
+
+    <!-- About Section -->
+    <section id="about" class="py-20 lg:py-32 bg-white dark:bg-slate-900 scroll-mt-20">
+      <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl mx-auto">
+          <!-- Section Header -->
+          <div class="text-center mb-16">
+            <h2 class="text-4xl lg:text-5xl font-display font-bold text-slate-900 dark:text-white mb-6">
+              About <span class="text-brand-600 dark:text-brand-400">Me</span>
+            </h2>
+            <div class="w-24 h-1 bg-gradient-to-r from-brand-500 to-indigo-500 mx-auto rounded-full"></div>
+          </div>
+          
+          <!-- Content Grid -->
+          <div class="grid lg:grid-cols-2 gap-12 items-center">
+            <!-- Text Content -->
+            <div class="space-y-6">
+              <div class="prose prose-lg dark:prose-invert">
+                <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+                  I'm <strong class="text-brand-600 dark:text-brand-400">Co-founder & CTO at ePrecisio</strong> and 
+                  <strong class="text-green-600 dark:text-green-400">CEO & Founder at URNLabs.ai</strong>. 
+                  With 5+ years of infrastructure engineering expertise, I specialize in transforming 
+                  enterprise systems through Kubernetes orchestration, cloud migration, and DevOps automation.
+                </p>
+                
+                <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Currently at <strong>Unifonic</strong>, I've led critical infrastructure transformations including 
+                  the migration of <strong>40+ applications</strong> from AWS EKS to OCI OKE and <strong>20+ database servers</strong> 
+                  (16 CPU/64GB RAM each) from AWS to Oracle Cloud. I manage <strong>300+ Kubernetes nodes</strong> 
+                  across multi-cloud environments with proven expertise in cost optimization and performance enhancement.
+                </p>
+                
+                <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+                  As a <strong class="text-brand-600 dark:text-brand-400">CKAD certified</strong> professional, 
+                  I've built automation systems that prevent recurring issues and developed custom Terraform modules 
+                  to enhance infrastructure stability. My experience spans AWS, Oracle Cloud Infrastructure, 
+                  and hybrid cloud environments, consistently delivering measurable ROI and operational excellence.
+                </p>
+              </div>
+              
+              <!-- Key Stats -->
+              <div class="grid grid-cols-2 gap-6 pt-6">
+                <div class="text-center p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                  <div class="text-2xl font-bold text-brand-600 dark:text-brand-400">5+</div>
+                  <div class="text-sm text-slate-600 dark:text-slate-400">Years Infrastructure</div>
+                </div>
+                <div class="text-center p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                  <div class="text-2xl font-bold text-brand-600 dark:text-brand-400">300+</div>
+                  <div class="text-sm text-slate-600 dark:text-slate-400">K8s Nodes Managed</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Visual Element -->
+            <div class="relative">
+              <div class="relative z-10 bg-gradient-to-br from-brand-500 to-indigo-600 rounded-2xl p-8 text-white shadow-2xl">
+                <h3 class="text-xl font-semibold mb-4">Core Expertise</h3>
+                <ul class="space-y-3">
+                  <li class="flex items-center">
+                    <svg class="w-5 h-5 mr-3 text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    Kubernetes & Container Orchestration (CKAD)
+                  </li>
+                  <li class="flex items-center">
+                    <svg class="w-5 h-5 mr-3 text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    Cloud Migration & Multi-cloud Architecture
+                  </li>
+                  <li class="flex items-center">
+                    <svg class="w-5 h-5 mr-3 text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    Infrastructure as Code & Automation
+                  </li>
+                  <li class="flex items-center">
+                    <svg class="w-5 h-5 mr-3 text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    DevOps & Team Leadership
+                  </li>
+                </ul>
+              </div>
+              
+              <!-- Background Decoration -->
+              <div class="absolute inset-0 bg-gradient-to-br from-brand-400 to-indigo-500 rounded-2xl transform rotate-3 scale-105 -z-10"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Experience Section -->
+    <section id="experience" class="py-20 lg:py-32 bg-slate-50 dark:bg-slate-800 scroll-mt-20">
+      <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl mx-auto">
+          <!-- Section Header -->
+          <div class="text-center mb-16">
+            <h2 class="text-4xl lg:text-5xl font-display font-bold text-slate-900 dark:text-white mb-6">
+              Professional <span class="text-brand-600 dark:text-brand-400">Experience</span>
+            </h2>
+            <div class="w-24 h-1 bg-gradient-to-r from-brand-500 to-indigo-500 mx-auto rounded-full"></div>
+          </div>
+          
+          <!-- Timeline -->
+          <div class="relative">
+            <!-- Vertical Line -->
+            <div class="absolute left-8 top-0 bottom-0 w-0.5 bg-brand-200 dark:bg-brand-800"></div>
+            
+            <!-- Experience Items -->
+            <div class="space-y-12">
+              <!-- Upcoming Roles -->
+              <div class="relative flex items-start">
+                <div class="absolute left-6 w-4 h-4 bg-brand-500 rounded-full border-4 border-white dark:border-slate-800 shadow-lg"></div>
+                <div class="ml-20 bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-200">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white">Co-founder & CTO + CEO & Founder</h3>
+                    <span class="text-brand-600 dark:text-brand-400 font-semibold">2024 - Present</span>
+                  </div>
+                  <h4 class="text-lg font-semibold text-brand-600 dark:text-brand-400 mb-3">ePrecisio • URNLabs.ai</h4>
+                  <p class="text-slate-600 dark:text-slate-300 mb-4">
+                    Transitioning to executive leadership roles as Co-founder & CTO at ePrecisio and CEO & Founder at URNLabs.ai. 
+                    Leveraging 5+ years of infrastructure engineering expertise to build next-generation platforms.
+                  </p>
+                  <ul class="list-disc list-inside text-slate-600 dark:text-slate-300 space-y-1">
+                    <li>Leading technology strategy and platform architecture for ePrecisio</li>
+                    <li>Building URNLabs.ai as a comprehensive AI agent platform</li>
+                    <li>Applying proven expertise in Kubernetes, cloud migration, and DevOps</li>
+                    <li>Scaling teams and establishing engineering best practices</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <!-- Unifonic -->
+              <div class="relative flex items-start">
+                <div class="absolute left-6 w-4 h-4 bg-slate-300 dark:bg-slate-600 rounded-full border-4 border-white dark:border-slate-800 shadow-lg"></div>
+                <div class="ml-20 bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-200">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white">Senior Infrastructure Engineer</h3>
+                    <span class="text-slate-500 dark:text-slate-400 font-semibold">2024 • DevOps Engineer (2022-2024)</span>
+                  </div>
+                  <h4 class="text-lg font-semibold text-slate-600 dark:text-slate-400 mb-3">Unifonic</h4>
+                  <p class="text-slate-600 dark:text-slate-300 mb-4">
+                    Led critical infrastructure transformations enabling seamless migrations of applications 
+                    and databases across multi-cloud environments. Built automation to prevent recurring issues 
+                    and enhanced system performance to handle millions of messages.
+                  </p>
+                  <ul class="list-disc list-inside text-slate-600 dark:text-slate-300 space-y-1">
+                    <li>Migrated 40+ applications from AWS EKS to OCI OKE</li>
+                    <li>Oversaw migration of 20+ database servers (16 CPU/64GB RAM each)</li>
+                    <li>Managed 300+ Kubernetes nodes across Rancher, EKS, OKE</li>
+                    <li>Implemented Strimzi Kafka as shared service for all products</li>
+                    <li>Developed custom Terraform modules for infrastructure stability</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <!-- Emumba -->
+              <div class="relative flex items-start">
+                <div class="absolute left-6 w-4 h-4 bg-slate-300 dark:bg-slate-600 rounded-full border-4 border-white dark:border-slate-800 shadow-lg"></div>
+                <div class="ml-20 bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-200">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white">DevOps Engineer</h3>
+                    <span class="text-slate-500 dark:text-slate-400 font-semibold">2019 - 2022</span>
+                  </div>
+                  <h4 class="text-lg font-semibold text-slate-600 dark:text-slate-400 mb-3">Emumba</h4>
+                  <p class="text-slate-600 dark:text-slate-300 mb-4">
+                    Founder and Lead Contributor for the Cloud Centre of Excellence (CCOE). 
+                    Led DevOps engineers focusing on public cloud (AWS, Azure) and established 
+                    cloud architecture best practices for highly-available, scalable applications.
+                  </p>
+                  <ul class="list-disc list-inside text-slate-600 dark:text-slate-300 space-y-1">
+                    <li>Founded and led Cloud Centre of Excellence (CCOE)</li>
+                    <li>Designed cloud architecture for HIPAA/HITECH compliant applications</li>
+                    <li>Built CI/CD pipelines for VMware vSphere VDI image building</li>
+                    <li>Managed KVM and Proxmox clusters for testing environments</li>
+                    <li>Implemented monitoring and logging with Prometheus</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <!-- Education -->
+              <div class="relative flex items-start">
+                <div class="absolute left-6 w-4 h-4 bg-slate-300 dark:bg-slate-600 rounded-full border-4 border-white dark:border-slate-800 shadow-lg"></div>
+                <div class="ml-20 bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-200">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white">Bachelor's Degree, Computer Science</h3>
+                    <span class="text-slate-500 dark:text-slate-400 font-semibold">2015 - 2019</span>
+                  </div>
+                  <h4 class="text-lg font-semibold text-slate-600 dark:text-slate-400 mb-3">National University of Computer and Emerging Sciences</h4>
+                  <p class="text-slate-600 dark:text-slate-300 mb-4">
+                    Solid foundation in computer science fundamentals, software engineering principles, 
+                    and distributed systems that enabled expertise in cloud infrastructure and DevOps practices.
+                  </p>
+                  <ul class="list-disc list-inside text-slate-600 dark:text-slate-300 space-y-1">
+                    <li>Runner-up in Speed Programming Competition</li>
+                    <li>Focus on distributed systems and network architecture</li>
+                    <li>Strong mathematical and algorithmic foundation</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Projects Section -->
+    <ProjectsSection />
+
+    <!-- Skills Section -->
+    <SkillsSection />
+
+    <!-- Contact Section -->
+    <ContactSection />
+  </main>
+  
+  <!-- Footer -->
+  <footer class="bg-slate-900 dark:bg-slate-950 text-white py-12">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center">
+        <div class="flex items-center justify-center space-x-2 mb-6">
+          <div class="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-600 rounded-lg flex items-center justify-center">
+            <span class="text-white font-bold text-sm">UR</span>
+          </div>
+          <span class="font-display font-semibold text-xl">usmanramzan.ai</span>
+        </div>
+        
+        <div class="flex justify-center space-x-6 mb-8">
+          <a href="https://github.com/muhammadusmanramzan" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-brand-400 transition-colors duration-200">
+            <span class="sr-only">GitHub</span>
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+          </a>
+          <a href="https://linkedin.com/in/muhammadusmanramzan" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-brand-400 transition-colors duration-200">
+            <span class="sr-only">LinkedIn</span>
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </a>
+          <a href="https://twitter.com/usmanramzan" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-brand-400 transition-colors duration-200">
+            <span class="sr-only">Twitter</span>
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+            </svg>
+          </a>
+        </div>
+        
+        <p class="text-slate-400">© 2024 Muhammad Usman Ramzan. Built with passion and precision.</p>
+      </div>
+    </div>
+  </footer>
+</BaseLayout>

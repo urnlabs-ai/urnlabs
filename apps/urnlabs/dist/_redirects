@@ -1,0 +1,17 @@
+# Redirects for Urnlabs website
+
+# Common redirects
+/home /
+/platform/overview /platform/
+/docs https://docs.urnlabs.ai
+/status https://status.urnlabs.ai
+/app https://app.urnlabs.ai
+
+# Blog redirects (when blog is implemented)
+/blog/feed /blog/rss.xml
+
+# Legacy redirects (add as needed)
+# /old-path /new-path 301
+
+# Catch-all for SPA-like behavior (if needed)
+# /* /index.html 200

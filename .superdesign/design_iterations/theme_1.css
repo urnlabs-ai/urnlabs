@@ -1,0 +1,91 @@
+:root {
+  --background: oklch(0.0611 0 0);
+  --foreground: oklch(0.9851 0 0);
+  --card: oklch(0.0824 0 0);
+  --card-foreground: oklch(0.9851 0 0);
+  --popover: oklch(0.0824 0 0);
+  --popover-foreground: oklch(0.9851 0 0);
+  --primary: oklch(0.7080 0.2370 142.4953);
+  --primary-foreground: oklch(0.0611 0 0);
+  --secondary: oklch(0.1648 0 0);
+  --secondary-foreground: oklch(0.9851 0 0);
+  --muted: oklch(0.1648 0 0);
+  --muted-foreground: oklch(0.6489 0 0);
+  --accent: oklch(0.5931 0.2726 328.3634);
+  --accent-foreground: oklch(0.9851 0 0);
+  --destructive: oklch(0.5770 0.2450 27.3250);
+  --destructive-foreground: oklch(0.9851 0 0);
+  --border: oklch(0.2046 0 0);
+  --input: oklch(0.1648 0 0);
+  --ring: oklch(0.7080 0.2370 142.4953);
+  --chart-1: oklch(0.7080 0.2370 142.4953);
+  --chart-2: oklch(0.5931 0.2726 328.3634);
+  --chart-3: oklch(0.6489 0.2370 26.9728);
+  --chart-4: oklch(0.5635 0.2408 260.8178);
+  --chart-5: oklch(0.7323 0.2492 142.4953);
+  --sidebar: oklch(0.0824 0 0);
+  --sidebar-foreground: oklch(0.9851 0 0);
+  --sidebar-primary: oklch(0.7080 0.2370 142.4953);
+  --sidebar-primary-foreground: oklch(0.0611 0 0);
+  --sidebar-accent: oklch(0.1648 0 0);
+  --sidebar-accent-foreground: oklch(0.9851 0 0);
+  --sidebar-border: oklch(0.2046 0 0);
+  --sidebar-ring: oklch(0.7080 0.2370 142.4953);
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  --font-serif: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Source Code Pro', monospace;
+  --radius: 0.5rem;
+  --shadow-2xs: 0 1px 2px 0px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.1);
+  --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
+  --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
+  --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -4px hsl(0 0% 0% / 0.1);
+  --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.1), 0 8px 10px -6px hsl(0 0% 0% / 0.1);
+  --shadow-2xl: 0 25px 50px -12px hsl(0 0% 0% / 0.25);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Custom utility classes for the admin dashboard */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.gradient-primary {
+  background: linear-gradient(135deg, oklch(0.7080 0.2370 142.4953), oklch(0.5931 0.2726 328.3634)) !important;
+}
+
+.gradient-card {
+  background: linear-gradient(145deg, oklch(0.0824 0 0), oklch(0.1648 0 0)) !important;
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, oklch(0.7080 0.2370 142.4953), oklch(0.5931 0.2726 328.3634)) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+.status-online {
+  color: oklch(0.7080 0.2370 142.4953) !important;
+}
+
+.status-offline {
+  color: oklch(0.6489 0 0) !important;
+}
+
+.status-error {
+  color: oklch(0.5770 0.2450 27.3250) !important;
+}
+
+.status-warning {
+  color: oklch(0.6489 0.2370 26.9728) !important;
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@urnlabs/ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared UI components for Urnlabs websites",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./components/*": "./src/components/*",
+    "./utils/*": "./src/utils/*"
+  },
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "astro": "^4.15.12"
+  },
+  "devDependencies": {
+    "@urnlabs/config": "workspace:*",
+    "@types/node": "^22.7.5",
+    "typescript": "^5.6.3"
+  }
+}

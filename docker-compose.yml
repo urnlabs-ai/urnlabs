@@ -1,0 +1,270 @@
+services:
+  # Using existing PostgreSQL and Redis from stack8s
+  # postgres and redis services disabled to avoid port conflicts
+
+  # Main Gateway Service - Single Entry Point
+  gateway:
+    build:
+      context: .
+      dockerfile: apps/gateway/Dockerfile
+      target: dev
+    container_name: urnlabs-gateway
+    ports:
+      - "7000:7000"  # Main entry point for all traffic
+    environment:
+      - NODE_ENV=development
+      - GATEWAY_PORT=7000
+      - API_ENDPOINT=http://api:7001
+      - AGENTS_ENDPOINT=http://agents:7002
+      - BRIDGE_ENDPOINT=http://bridge:7003
+      - DASHBOARD_ENDPOINT=http://dashboard:7004
+      - MAESTRO_ENDPOINT=http://urn-maestro:7005
+      - MONITORING_ENDPOINT=http://monitoring:7006
+      - REDIS_URL=redis://host.docker.internal:6379
+      - JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
+    depends_on:
+      - api
+      - agents
+      - bridge
+      - monitoring
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+
+  # API Service (Internal Network)
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: dev
+    container_name: urnlabs-api
+    ports:
+      - "7001:7001"
+    environment:
+      - NODE_ENV=development
+      - API_PORT=7001
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev
+      - REDIS_URL=redis://host.docker.internal:6379
+      - JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
+      - GATEWAY_URL=http://gateway:7000
+      - AGENTS_ENDPOINT=http://agents:7002
+      - MAESTRO_ENDPOINT=http://urn-maestro:7005
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+
+  # Agent Service (Internal Network)
+  agents:
+    build:
+      context: .
+      dockerfile: apps/agents/Dockerfile
+      target: dev
+    container_name: urnlabs-agents
+    ports:
+      - "7002:7002"
+    environment:
+      - NODE_ENV=development
+      - AGENT_SERVICE_PORT=7002
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev
+      - REDIS_URL=redis://host.docker.internal:6379
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - API_ENDPOINT=http://api:7001
+      - GATEWAY_URL=http://gateway:7000
+      - MAESTRO_ENDPOINT=http://urn-maestro:7005
+      - MONITORING_ENDPOINT=http://monitoring:7006
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+
+  # API Bridge Service (Go <-> Node.js)
+  bridge:
+    build:
+      context: .
+      dockerfile: apps/bridge/Dockerfile
+      target: dev
+    container_name: urnlabs-bridge
+    ports:
+      - "7003:7003"
+    environment:
+      - NODE_ENV=development
+      - BRIDGE_PORT=7003
+      - API_ENDPOINT=http://api:7001
+      - AGENTS_ENDPOINT=http://agents:7002
+      - GATEWAY_URL=http://gateway:7000
+      - MAESTRO_ENDPOINT=http://urn-maestro:7005
+      - REDIS_URL=redis://host.docker.internal:6379
+    depends_on:
+      - api
+      - agents
+      - urn-maestro
+    volumes:
+      - shared_data:/shared
+
+  # Enhanced Dashboard Service
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+    container_name: urnlabs-dashboard
+    ports:
+      - "7004:7004"
+    environment:
+      - NODE_ENV=development
+      - DASHBOARD_PORT=7004
+      - VITE_GATEWAY_URL=http://localhost:7000
+      - VITE_API_URL=http://localhost:7000/api
+      - VITE_AGENTS_URL=http://localhost:7000/agents
+      - VITE_BRIDGE_URL=http://localhost:7000/bridge
+      - VITE_MAESTRO_URL=http://localhost:7000/maestro
+      - VITE_WS_URL=ws://localhost:7000/ws
+    depends_on:
+      - gateway
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  # URN-MAESTRO Go Service
+  urn-maestro:
+    build:
+      context: ../urn-maestro-go
+      dockerfile: Dockerfile
+    container_name: urnlabs-maestro
+    ports:
+      - "7005:7005"  # Main HTTP server
+      - "7015:7015"  # MCP server
+    environment:
+      - URN_ENHANCED_MODE=true
+      - URN_HTTP_PORT=7005
+      - URN_MCP_PORT=7015
+      - URN_LOG_LEVEL=info
+      - URN_DATABASE_PATH=/data/urn-maestro.db
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - QWEN_API_KEY=${QWEN_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - JIRA_PAT=${JIRA_PAT}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - NODE_API_ENDPOINT=http://api:7001
+      - NODE_AGENT_ENDPOINT=http://agents:7002
+      - GATEWAY_URL=http://gateway:7000
+    volumes:
+      - maestro_data:/data
+      - shared_data:/shared
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Monitoring & Observability Service
+  monitoring:
+    build:
+      context: .
+      dockerfile: packages/monitoring/Dockerfile
+      target: dev
+    container_name: urnlabs-monitoring
+    ports:
+      - "7006:7006"  # Monitoring dashboard
+      - "7016:7016"  # MCP server
+    environment:
+      - NODE_ENV=development
+      - MONITORING_PORT=7006
+      - MONITORING_MCP_PORT=7016
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev
+      - REDIS_URL=redis://host.docker.internal:6379
+      - PROMETHEUS_URL=http://host.docker.internal:9090
+      - GRAFANA_URL=http://host.docker.internal:3001
+      - DATADOG_API_KEY=${DATADOG_API_KEY}
+      - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
+      - GATEWAY_URL=http://gateway:7000
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+      - monitoring_data:/data
+
+  # MCP Integration Service
+  mcp-integration:
+    build:
+      context: .
+      dockerfile: packages/mcp-integration/Dockerfile
+      target: dev
+    container_name: urnlabs-mcp
+    ports:
+      - "7007:7007"  # MCP integration service
+    environment:
+      - NODE_ENV=development
+      - MCP_SERVICE_PORT=7007
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev
+      - REDIS_URL=redis://host.docker.internal:6379
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_TEAM_ID=${SLACK_TEAM_ID}
+      - GATEWAY_URL=http://gateway:7000
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+
+  # Testing & Quality Assurance Service
+  testing:
+    build:
+      context: .
+      dockerfile: packages/testing/Dockerfile
+      target: dev
+    container_name: urnlabs-testing
+    ports:
+      - "7008:7008"  # Testing service
+    environment:
+      - NODE_ENV=test
+      - TESTING_PORT=7008
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_test
+      - REDIS_URL=redis://host.docker.internal:6379
+      - GATEWAY_URL=http://gateway:7000
+      - API_URL=http://api:7001
+      - AGENTS_URL=http://agents:7002
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+
+  # Security & Compliance Service
+  security:
+    build:
+      context: .
+      dockerfile: packages/security/Dockerfile
+      target: dev
+    container_name: urnlabs-security
+    ports:
+      - "7009:7009"  # Security service
+    environment:
+      - NODE_ENV=development
+      - SECURITY_PORT=7009
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev
+      - REDIS_URL=redis://host.docker.internal:6379
+      - VAULT_ADDR=${VAULT_ADDR}
+      - VAULT_TOKEN=${VAULT_TOKEN}
+      - SONAR_HOST_URL=${SONAR_HOST_URL}
+      - SONAR_TOKEN=${SONAR_TOKEN}
+      - SNYK_TOKEN=${SNYK_TOKEN}
+      - GATEWAY_URL=http://gateway:7000
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+
+volumes:
+  postgres_data:
+  redis_data:
+  maestro_data:
+  shared_data:
+  monitoring_data:
+
+networks:
+  default:
+    name: urnlabs-network
+    driver: bridge

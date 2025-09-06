@@ -1,0 +1,22 @@
+# Redirects for personal website
+
+# Common redirects
+/home /
+/cv /resume
+/resume.pdf /resume
+
+# Social media shortcuts  
+/linkedin https://linkedin.com/in/mramzan-pk
+/github https://github.com/mramzan-pk
+/twitter https://twitter.com/mramzan_pk
+
+# Urdu language redirect patterns
+/ur/home /ur/
+/ur/about /ur/about/
+
+# Legacy redirects (add as needed)
+# /old-path /new-path 301
+
+# Blog feed
+/feed /writing/rss.xml
+/rss /writing/rss.xml

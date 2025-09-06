@@ -1,0 +1,12 @@
+{
+  "extends": "@urnlabs/config/typescript",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./src/*"],
+      "@/*": ["./src/*"],
+      "@ui/*": ["../../packages/ui/src/*"]
+    }
+  },
+  "include": ["src/**/*", "astro.config.mjs"]
+}

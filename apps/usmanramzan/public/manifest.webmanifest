@@ -1,0 +1,21 @@
+{
+  "name": "Usman Ramzan - DevOps Engineer & CTO",
+  "short_name": "Usman Ramzan",
+  "description": "Senior DevOps Engineer and CTO. Kubernetes expert, cloud architect, and agentic workflow pioneer.",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#0072FF",
+  "background_color": "#111111",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

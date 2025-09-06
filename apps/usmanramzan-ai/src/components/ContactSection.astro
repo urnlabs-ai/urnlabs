@@ -1,0 +1,228 @@
+---
+import ContactForm from './ContactForm';
+---
+
+<section id="contact" class="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-slate-800/50 scroll-mt-20">
+  <div class="max-w-7xl mx-auto">
+    <!-- Section Header -->
+    <div class="text-center mb-16">
+      <div class="inline-flex items-center justify-center w-12 h-12 bg-brand-100 dark:bg-brand-900/20 rounded-lg mb-6">
+        <svg class="w-6 h-6 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+        </svg>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+        Transform Your Infrastructure
+      </h2>
+      <p class="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+        Need enterprise-scale infrastructure solutions? Looking for CTO-level strategic guidance? Let's discuss how my expertise in Kubernetes, cloud migration, and DevOps can accelerate your business.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <!-- Contact Form -->
+      <div class="lg:col-span-2">
+        <div class="bg-card text-card-foreground rounded-2xl shadow-xl border p-8">
+          <div class="mb-8">
+            <h3 class="text-2xl font-semibold text-gray-900 dark:text-white mb-3">
+              Send me a message
+            </h3>
+            <p class="text-gray-600 dark:text-gray-300">
+              Whether you need infrastructure architecture consulting, cloud migration expertise, or strategic technology leadership, I'm here to help your organization scale.
+            </p>
+          </div>
+          
+          <ContactForm client:load />
+        </div>
+      </div>
+
+      <!-- Contact Information -->
+      <div class="lg:col-span-1 space-y-6">
+        <!-- Direct Contact -->
+        <div class="bg-card text-card-foreground rounded-2xl shadow-lg border p-6">
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Direct Contact
+          </h3>
+          
+          <div class="space-y-4">
+            <div class="flex items-start space-x-3">
+              <div class="flex-shrink-0">
+                <svg class="w-5 h-5 text-brand-600 dark:text-brand-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Email</p>
+                <a 
+                  href="mailto:usman.ramzan0505@gmail.com" 
+                  class="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors"
+                >
+                  usman.ramzan0505@gmail.com
+                </a>
+              </div>
+            </div>
+
+            <div class="flex items-start space-x-3">
+              <div class="flex-shrink-0">
+                <svg class="w-5 h-5 text-brand-600 dark:text-brand-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Location</p>
+                <p class="text-gray-600 dark:text-gray-300">Lahore, Pakistan & Global Remote</p>
+              </div>
+            </div>
+
+            <div class="flex items-start space-x-3">
+              <div class="flex-shrink-0">
+                <svg class="w-5 h-5 text-brand-600 dark:text-brand-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Response Time</p>
+                <p class="text-gray-600 dark:text-gray-300">Within 24 hours</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Social Links -->
+        <div class="bg-card text-card-foreground rounded-2xl shadow-lg border p-6">
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Connect Online
+          </h3>
+          
+          <div class="space-y-3">
+            <a
+              href="https://github.com/muhammadusmanramzan"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors group"
+            >
+              <svg class="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+              </svg>
+              <div>
+                <p class="font-medium text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                  GitHub
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-500">@muhammadusmanramzan</p>
+              </div>
+            </a>
+
+            <a
+              href="https://linkedin.com/in/muhammadusmanramzan"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors group"
+            >
+              <svg class="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+              </svg>
+              <div>
+                <p class="font-medium text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                  LinkedIn
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-500">Professional Profile</p>
+              </div>
+            </a>
+
+            <a
+              href="https://twitter.com/usmanramzan"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors group"
+            >
+              <svg class="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+              </svg>
+              <div>
+                <p class="font-medium text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                  Twitter
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-500">@usmanramzan</p>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Availability -->
+        <div class="bg-gradient-to-br from-brand-50 to-brand-100 dark:from-brand-900/20 dark:to-brand-800/20 rounded-2xl border border-brand-200 dark:border-brand-700 p-6">
+          <div class="flex items-center space-x-3 mb-4">
+            <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              Currently Available
+            </h3>
+          </div>
+          
+          <p class="text-sm text-gray-700 dark:text-gray-300 mb-4">
+            Available for executive consulting, infrastructure architecture, and strategic technology partnerships. Let's discuss how I can accelerate your digital transformation.
+          </p>
+          
+          <div class="space-y-2 text-sm">
+            <div class="flex items-center space-x-2">
+              <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span class="text-gray-700 dark:text-gray-300">Infrastructure Architecture</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span class="text-gray-700 dark:text-gray-300">Cloud Migration (AWS/OCI)</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span class="text-gray-700 dark:text-gray-300">Kubernetes & DevOps</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span class="text-gray-700 dark:text-gray-300">CTO-level Consulting</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA Section -->
+    <div class="mt-16 text-center">
+      <div class="max-w-3xl mx-auto">
+        <h3 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+          Ready to Scale Your Infrastructure?
+        </h3>
+        <p class="text-gray-600 dark:text-gray-300 mb-8">
+          From strategic planning to hands-on implementation, I'll help you build robust, scalable infrastructure that drives business growth. Let's discuss your infrastructure challenges and goals.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a
+            href="#contact"
+            onclick="document.getElementById('name').focus()"
+            class="inline-flex items-center justify-center h-11 rounded-md px-8 bg-primary text-primary-foreground hover:bg-primary/90 font-medium transition-colors"
+          >
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+            Send Message
+          </a>
+          <a
+            href="mailto:usman.ramzan0505@gmail.com?subject=Infrastructure Consulting Inquiry"
+            class="inline-flex items-center px-6 py-3 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 font-medium rounded-lg transition-colors"
+          >
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+            </svg>
+            Quick Email
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

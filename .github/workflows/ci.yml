@@ -1,0 +1,174 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
+  build-urnlabs:
+    name: Build Urnlabs Site
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Urnlabs
+        run: cd apps/urnlabs && pnpm build
+
+      - name: Upload Urnlabs build
+        uses: actions/upload-artifact@v3
+        with:
+          name: urnlabs-dist
+          path: apps/urnlabs/dist
+
+  build-usmanramzan:
+    name: Build Personal Site
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Personal Site
+        run: cd apps/usmanramzan && pnpm build
+
+      - name: Upload Personal Site build
+        uses: actions/upload-artifact@v3
+        with:
+          name: usmanramzan-dist
+          path: apps/usmanramzan/dist
+
+  lighthouse-urnlabs:
+    name: Lighthouse CI - Urnlabs
+    runs-on: ubuntu-latest
+    needs: [build-urnlabs]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: urnlabs-dist
+          path: apps/urnlabs/dist
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.12.x
+
+      - name: Run Lighthouse CI
+        run: |
+          cd apps/urnlabs
+          lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+  deploy-urnlabs:
+    name: Deploy Urnlabs to Cloudflare Pages
+    runs-on: ubuntu-latest
+    needs: [build-urnlabs, lighthouse-urnlabs]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: urnlabs-dist
+          path: apps/urnlabs/dist
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: urnlabs-website
+          directory: apps/urnlabs/dist
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-usmanramzan:
+    name: Deploy Personal Site to Cloudflare Pages  
+    runs-on: ubuntu-latest
+    needs: [build-usmanramzan]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: usmanramzan-dist
+          path: apps/usmanramzan/dist
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: usmanramzan-website
+          directory: apps/usmanramzan/dist
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

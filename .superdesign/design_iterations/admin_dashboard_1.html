@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urnlabs AI - Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="theme_1.css">
+    <style>
+        /* Custom animations */
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px oklch(0.7080 0.2370 142.4953); }
+            50% { box-shadow: 0 0 20px oklch(0.7080 0.2370 142.4953); }
+        }
+        
+        @keyframes slide-in {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes fade-up {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .shimmer::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+        
+        .animate-pulse-glow {
+            animation: pulse-glow 2s infinite;
+        }
+        
+        .animate-slide-in {
+            animation: slide-in 0.4s ease-out;
+        }
+        
+        .animate-fade-up {
+            animation: fade-up 0.3s ease-out;
+        }
+        
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .transition-smooth {
+            transition: all 0.2s ease-out;
+        }
+        
+        .sidebar-collapsed {
+            width: 4rem;
+        }
+        
+        .sidebar-expanded {
+            width: 16rem;
+        }
+        
+        /* WebSocket connection indicator */
+        .ws-connected {
+            animation: pulse-glow 2s infinite;
+        }
+        
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: oklch(0.1648 0 0);
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: oklch(0.2046 0 0);
+            border-radius: 2px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: oklch(0.3046 0 0);
+        }
+    </style>
+</head>
+<body style="background: oklch(0.0611 0 0); color: oklch(0.9851 0 0); font-family: var(--font-sans);">
+    <!-- Header -->
+    <header style="background: oklch(0.0824 0 0); border-bottom: 1px solid oklch(0.2046 0 0);" class="fixed top-0 left-0 right-0 z-50 h-16">
+        <div class="flex items-center justify-between h-full px-6">
+            <!-- Left side -->
+            <div class="flex items-center space-x-4">
+                <button id="sidebarToggle" class="p-2 rounded-md hover:bg-opacity-10 hover:bg-white transition-smooth">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+                        <i data-lucide="cpu" class="w-5 h-5 text-black"></i>
+                    </div>
+                    <h1 class="text-xl font-semibold">Urnlabs AI</h1>
+                </div>
+            </div>
+            
+            <!-- Center - Breadcrumb -->
+            <div class="hidden md:flex items-center space-x-2 text-sm" style="color: oklch(0.6489 0 0);">
+                <span>Dashboard</span>
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                <span style="color: oklch(0.9851 0 0);">Overview</span>
+            </div>
+            
+            <!-- Right side -->
+            <div class="flex items-center space-x-4">
+                <!-- WebSocket Status -->
+                <div class="flex items-center space-x-2">
+                    <div id="wsStatus" class="w-2 h-2 rounded-full bg-red-500"></div>
+                    <span class="text-sm" style="color: oklch(0.6489 0 0);">Connecting...</span>
+                </div>
+                
+                <!-- Notifications -->
+                <button class="p-2 rounded-md hover:bg-opacity-10 hover:bg-white transition-smooth relative">
+                    <i data-lucide="bell" class="w-5 h-5"></i>
+                    <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+                
+                <!-- User Menu -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-purple-500 flex items-center justify-center text-sm font-medium text-black">
+                        U
+                    </div>
+                    <div class="hidden sm:block">
+                        <div class="text-sm font-medium">Admin User</div>
+                        <div class="text-xs" style="color: oklch(0.6489 0 0);">admin@urnlabs.ai</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="flex pt-16 min-h-screen">
+        <!-- Sidebar -->
+        <aside id="sidebar" style="background: oklch(0.0824 0 0); border-right: 1px solid oklch(0.2046 0 0);" class="fixed left-0 top-16 bottom-0 sidebar-expanded transition-all duration-300 z-40">
+            <nav class="p-4 space-y-2 h-full overflow-y-auto custom-scrollbar">
+                <!-- Navigation Items -->
+                <div class="space-y-1">
+                    <a href="#dashboard" class="nav-item active flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth" style="background: oklch(0.1648 0 0); color: oklch(0.7080 0.2370 142.4953);">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                        <span class="sidebar-text">Overview</span>
+                    </a>
+                    
+                    <a href="#agents" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                        <i data-lucide="bot" class="w-5 h-5"></i>
+                        <span class="sidebar-text">Agents</span>
+                        <span class="sidebar-text ml-auto text-xs px-2 py-1 rounded-full" style="background: oklch(0.7080 0.2370 142.4953); color: oklch(0.0611 0 0);">4</span>
+                    </a>
+                    
+                    <a href="#workflows" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                        <i data-lucide="workflow" class="w-5 h-5"></i>
+                        <span class="sidebar-text">Workflows</span>
+                    </a>
+                    
+                    <a href="#monitoring" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                        <i data-lucide="activity" class="w-5 h-5"></i>
+                        <span class="sidebar-text">Monitoring</span>
+                        <div class="sidebar-text ml-auto w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    </a>
+                    
+                    <a href="#users" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                        <i data-lucide="users" class="w-5 h-5"></i>
+                        <span class="sidebar-text">Users</span>
+                    </a>
+                    
+                    <a href="#analytics" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                        <i data-lucide="bar-chart" class="w-5 h-5"></i>
+                        <span class="sidebar-text">Analytics</span>
+                    </a>
+                </div>
+                
+                <!-- Divider -->
+                <div class="my-4 border-t" style="border-color: oklch(0.2046 0 0);"></div>
+                
+                <!-- System Section -->
+                <div class="space-y-1">
+                    <div class="px-3 py-2 text-xs font-medium uppercase tracking-wider" style="color: oklch(0.6489 0 0);">
+                        <span class="sidebar-text">System</span>
+                    </div>
+                    
+                    <a href="#settings" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                        <i data-lucide="settings" class="w-5 h-5"></i>
+                        <span class="sidebar-text">Settings</span>
+                    </a>
+                    
+                    <a href="#logs" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                        <i data-lucide="file-text" class="w-5 h-5"></i>
+                        <span class="sidebar-text">Logs</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="mainContent" class="flex-1 sidebar-expanded transition-all duration-300 ml-64">
+            <div class="p-6 space-y-6">
+                <!-- Stats Overview -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Active Agents -->
+                    <div class="gradient-card p-6 rounded-lg hover-lift transition-smooth animate-fade-up">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium" style="color: oklch(0.6489 0 0);">Active Agents</p>
+                                <p class="text-3xl font-bold mt-2" style="color: oklch(0.7080 0.2370 142.4953);" id="activeAgents">4</p>
+                            </div>
+                            <div class="p-3 rounded-full" style="background: oklch(0.7080 0.2370 142.4953); color: oklch(0.0611 0 0);">
+                                <i data-lucide="bot" class="w-6 h-6"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center space-x-2">
+                            <i data-lucide="trending-up" class="w-4 h-4 text-green-400"></i>
+                            <span class="text-sm text-green-400">+2 from yesterday</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Running Tasks -->
+                    <div class="gradient-card p-6 rounded-lg hover-lift transition-smooth animate-fade-up" style="animation-delay: 0.1s;">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium" style="color: oklch(0.6489 0 0);">Running Tasks</p>
+                                <p class="text-3xl font-bold mt-2" style="color: oklch(0.5931 0.2726 328.3634);" id="runningTasks">12</p>
+                            </div>
+                            <div class="p-3 rounded-full" style="background: oklch(0.5931 0.2726 328.3634); color: oklch(0.0611 0 0);">
+                                <i data-lucide="play" class="w-6 h-6"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center space-x-2">
+                            <i data-lucide="clock" class="w-4 h-4" style="color: oklch(0.6489 0 0);"></i>
+                            <span class="text-sm" style="color: oklch(0.6489 0 0);">3 pending in queue</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Completed Today -->
+                    <div class="gradient-card p-6 rounded-lg hover-lift transition-smooth animate-fade-up" style="animation-delay: 0.2s;">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium" style="color: oklch(0.6489 0 0);">Completed Today</p>
+                                <p class="text-3xl font-bold mt-2" style="color: oklch(0.6489 0.2370 26.9728);" id="completedTasks">47</p>
+                            </div>
+                            <div class="p-3 rounded-full" style="background: oklch(0.6489 0.2370 26.9728); color: oklch(0.0611 0 0);">
+                                <i data-lucide="check-circle" class="w-6 h-6"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center space-x-2">
+                            <i data-lucide="trending-up" class="w-4 h-4 text-green-400"></i>
+                            <span class="text-sm text-green-400">+12% efficiency</span>
+                        </div>
+                    </div>
+                    
+                    <!-- System Load -->
+                    <div class="gradient-card p-6 rounded-lg hover-lift transition-smooth animate-fade-up" style="animation-delay: 0.3s;">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium" style="color: oklch(0.6489 0 0);">System Load</p>
+                                <p class="text-3xl font-bold mt-2" style="color: oklch(0.5635 0.2408 260.8178);" id="systemLoad">67%</p>
+                            </div>
+                            <div class="p-3 rounded-full" style="background: oklch(0.5635 0.2408 260.8178); color: oklch(0.0611 0 0);">
+                                <i data-lucide="cpu" class="w-6 h-6"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 w-full bg-gray-700 rounded-full h-2">
+                            <div class="h-2 rounded-full gradient-primary" style="width: 67%; transition: width 0.8s ease-out;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Real-time Activity & Agent Status -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Live Activity Feed -->
+                    <div class="gradient-card p-6 rounded-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold">Live Activity</h3>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                <span class="text-sm" style="color: oklch(0.6489 0 0);">Live</span>
+                            </div>
+                        </div>
+                        <div id="activityFeed" class="space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
+                            <!-- Activity items will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <!-- Agent Status -->
+                    <div class="gradient-card p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold mb-4">Agent Status</h3>
+                        <div id="agentStatus" class="space-y-4">
+                            <!-- Agent status items will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Workflows -->
+                <div class="gradient-card p-6 rounded-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold">Recent Workflows</h3>
+                        <button class="text-sm px-4 py-2 rounded-md transition-smooth hover:bg-opacity-10 hover:bg-white" style="color: oklch(0.7080 0.2370 142.4953);">
+                            View All
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr style="border-bottom: 1px solid oklch(0.2046 0 0);">
+                                    <th class="text-left py-3 px-4 font-medium" style="color: oklch(0.6489 0 0);">Workflow</th>
+                                    <th class="text-left py-3 px-4 font-medium" style="color: oklch(0.6489 0 0);">Agent</th>
+                                    <th class="text-left py-3 px-4 font-medium" style="color: oklch(0.6489 0 0);">Status</th>
+                                    <th class="text-left py-3 px-4 font-medium" style="color: oklch(0.6489 0 0);">Duration</th>
+                                    <th class="text-left py-3 px-4 font-medium" style="color: oklch(0.6489 0 0);">Started</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workflowTable">
+                                <!-- Workflow rows will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+        
+        // Sidebar toggle functionality
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        let sidebarCollapsed = false;
+        
+        sidebarToggle.addEventListener('click', () => {
+            sidebarCollapsed = !sidebarCollapsed;
+            
+            if (sidebarCollapsed) {
+                sidebar.classList.remove('sidebar-expanded');
+                sidebar.classList.add('sidebar-collapsed');
+                mainContent.classList.remove('sidebar-expanded');
+                mainContent.classList.add('sidebar-collapsed');
+                mainContent.style.marginLeft = '4rem';
+                
+                // Hide text elements
+                document.querySelectorAll('.sidebar-text').forEach(el => {
+                    el.style.display = 'none';
+                });
+            } else {
+                sidebar.classList.remove('sidebar-collapsed');
+                sidebar.classList.add('sidebar-expanded');
+                mainContent.classList.remove('sidebar-collapsed');
+                mainContent.classList.add('sidebar-expanded');
+                mainContent.style.marginLeft = '16rem';
+                
+                // Show text elements
+                document.querySelectorAll('.sidebar-text').forEach(el => {
+                    el.style.display = 'block';
+                });
+            }
+        });
+        
+        // WebSocket connection simulation
+        let wsConnected = false;
+        const wsStatus = document.getElementById('wsStatus');
+        const wsText = wsStatus.nextElementSibling;
+        
+        // Simulate WebSocket connection
+        setTimeout(() => {
+            wsConnected = true;
+            wsStatus.className = 'w-2 h-2 rounded-full bg-green-400 animate-pulse ws-connected';
+            wsText.textContent = 'Connected';
+            wsText.style.color = 'oklch(0.7080 0.2370 142.4953)';
+            
+            // Start receiving mock data
+            startMockDataStream();
+        }, 2000);
+        
+        // Mock data for activity feed
+        const mockActivities = [
+            { type: 'agent', message: 'Code Reviewer agent completed task #1247', time: 'now', icon: 'check-circle', color: 'text-green-400' },
+            { type: 'workflow', message: 'Deployment workflow started for project-api', time: '2m ago', icon: 'play', color: 'text-blue-400' },
+            { type: 'user', message: 'New user registered: john@example.com', time: '5m ago', icon: 'user-plus', color: 'text-purple-400' },
+            { type: 'system', message: 'System backup completed successfully', time: '10m ago', icon: 'hard-drive', color: 'text-green-400' },
+            { type: 'error', message: 'Agent timeout in workflow #892', time: '15m ago', icon: 'alert-circle', color: 'text-red-400' }
+        ];
+        
+        // Mock agent data
+        const mockAgents = [
+            { name: 'Code Reviewer', status: 'online', tasks: 3, lastActive: '2m ago' },
+            { name: 'Architecture Agent', status: 'online', tasks: 1, lastActive: '5m ago' },
+            { name: 'Testing Agent', status: 'busy', tasks: 2, lastActive: 'now' },
+            { name: 'Deployment Agent', status: 'idle', tasks: 0, lastActive: '1h ago' }
+        ];
+        
+        // Mock workflow data
+        const mockWorkflows = [
+            { name: 'Code Review & Deploy', agent: 'Code Reviewer', status: 'running', duration: '5m 32s', started: '8:45 AM' },
+            { name: 'Integration Testing', agent: 'Testing Agent', status: 'completed', duration: '12m 15s', started: '8:30 AM' },
+            { name: 'Architecture Analysis', agent: 'Architecture Agent', status: 'failed', duration: '3m 45s', started: '8:20 AM' },
+            { name: 'Production Deploy', agent: 'Deployment Agent', status: 'pending', duration: '-', started: '8:50 AM' }
+        ];
+        
+        function startMockDataStream() {
+            // Populate activity feed
+            const activityFeed = document.getElementById('activityFeed');
+            mockActivities.forEach((activity, index) => {
+                setTimeout(() => {
+                    const activityElement = document.createElement('div');
+                    activityElement.className = 'flex items-start space-x-3 p-3 rounded-md hover:bg-opacity-5 hover:bg-white transition-smooth animate-fade-up';
+                    activityElement.innerHTML = `
+                        <div class="flex-shrink-0 mt-1">
+                            <i data-lucide="${activity.icon}" class="w-4 h-4 ${activity.color}"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm">${activity.message}</p>
+                            <p class="text-xs mt-1" style="color: oklch(0.6489 0 0);">${activity.time}</p>
+                        </div>
+                    `;
+                    activityFeed.appendChild(activityElement);
+                    lucide.createIcons();
+                }, index * 300);
+            });
+            
+            // Populate agent status
+            const agentStatus = document.getElementById('agentStatus');
+            mockAgents.forEach((agent, index) => {
+                setTimeout(() => {
+                    const statusColor = agent.status === 'online' ? 'bg-green-400' : 
+                                      agent.status === 'busy' ? 'bg-yellow-400' : 
+                                      agent.status === 'idle' ? 'bg-gray-400' : 'bg-red-400';
+                    
+                    const agentElement = document.createElement('div');
+                    agentElement.className = 'flex items-center justify-between p-3 rounded-md hover:bg-opacity-5 hover:bg-white transition-smooth animate-fade-up';
+                    agentElement.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            <div class="w-3 h-3 rounded-full ${statusColor}"></div>
+                            <div>
+                                <p class="text-sm font-medium">${agent.name}</p>
+                                <p class="text-xs" style="color: oklch(0.6489 0 0);">Last active: ${agent.lastActive}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-medium" style="color: oklch(0.7080 0.2370 142.4953);">${agent.tasks}</p>
+                            <p class="text-xs" style="color: oklch(0.6489 0 0);">tasks</p>
+                        </div>
+                    `;
+                    agentStatus.appendChild(agentElement);
+                }, index * 200);
+            });
+            
+            // Populate workflow table
+            const workflowTable = document.getElementById('workflowTable');
+            mockWorkflows.forEach((workflow, index) => {
+                setTimeout(() => {
+                    const statusColor = workflow.status === 'running' ? 'text-yellow-400' :
+                                      workflow.status === 'completed' ? 'text-green-400' :
+                                      workflow.status === 'failed' ? 'text-red-400' : 'text-gray-400';
+                    
+                    const statusIcon = workflow.status === 'running' ? 'play' :
+                                     workflow.status === 'completed' ? 'check-circle' :
+                                     workflow.status === 'failed' ? 'x-circle' : 'clock';
+                    
+                    const row = document.createElement('tr');
+                    row.className = 'border-b hover:bg-opacity-5 hover:bg-white transition-smooth animate-fade-up';
+                    row.style.borderColor = 'oklch(0.2046 0 0)';
+                    row.innerHTML = `
+                        <td class="py-3 px-4">
+                            <div class="font-medium">${workflow.name}</div>
+                        </td>
+                        <td class="py-3 px-4" style="color: oklch(0.6489 0 0);">${workflow.agent}</td>
+                        <td class="py-3 px-4">
+                            <div class="flex items-center space-x-2">
+                                <i data-lucide="${statusIcon}" class="w-4 h-4 ${statusColor}"></i>
+                                <span class="capitalize ${statusColor}">${workflow.status}</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4" style="color: oklch(0.6489 0 0);">${workflow.duration}</td>
+                        <td class="py-3 px-4" style="color: oklch(0.6489 0 0);">${workflow.started}</td>
+                    `;
+                    workflowTable.appendChild(row);
+                    lucide.createIcons();
+                }, index * 150);
+            });
+            
+            // Simulate real-time counter updates
+            setInterval(() => {
+                const runningTasks = document.getElementById('runningTasks');
+                const currentValue = parseInt(runningTasks.textContent);
+                const change = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
+                const newValue = Math.max(0, currentValue + change);
+                
+                if (newValue !== currentValue) {
+                    runningTasks.textContent = newValue;
+                    runningTasks.style.transform = 'scale(1.05)';
+                    setTimeout(() => {
+                        runningTasks.style.transform = 'scale(1)';
+                    }, 200);
+                }
+                
+                // Update system load
+                const systemLoad = document.getElementById('systemLoad');
+                const loadBar = systemLoad.parentElement.parentElement.querySelector('.gradient-primary');
+                const newLoad = Math.floor(Math.random() * 30 + 50); // 50-80%
+                systemLoad.textContent = newLoad + '%';
+                loadBar.style.width = newLoad + '%';
+            }, 5000);
+        }
+        
+        // Navigation functionality
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // Remove active class from all items
+                document.querySelectorAll('.nav-item').forEach(nav => {
+                    nav.classList.remove('active');
+                    nav.style.background = 'transparent';
+                    nav.style.color = 'oklch(0.9851 0 0)';
+                });
+                
+                // Add active class to clicked item
+                item.classList.add('active');
+                item.style.background = 'oklch(0.1648 0 0)';
+                item.style.color = 'oklch(0.7080 0.2370 142.4953)';
+            });
+        });
+        
+        // Add hover effects
+        document.querySelectorAll('.hover-lift').forEach(element => {
+            element.addEventListener('mouseenter', () => {
+                element.style.transform = 'translateY(-2px)';
+                element.style.boxShadow = 'var(--shadow-lg)';
+            });
+            
+            element.addEventListener('mouseleave', () => {
+                element.style.transform = 'translateY(0)';
+                element.style.boxShadow = 'var(--shadow)';
+            });
+        });
+    </script>
+</body>
+</html>

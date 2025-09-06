@@ -1,0 +1,70 @@
+---
+import Button from './Button.astro';
+
+export interface Props {
+  title: string;
+  description?: string;
+  primaryCTA?: {
+    text: string;
+    href: string;
+  };
+  secondaryCTA?: {
+    text: string;
+    href: string;
+  };
+  variant?: 'default' | 'dark' | 'gradient';
+  class?: string;
+}
+
+const {
+  title,
+  description,
+  primaryCTA,
+  secondaryCTA,
+  variant = 'default',
+  class: className = '',
+} = Astro.props;
+
+const variantClasses = {
+  default: 'bg-primary-bg',
+  dark: 'bg-gray-900',
+  gradient: 'bg-gradient-to-r from-accent-blue/10 to-signal-green/10',
+};
+---
+
+<section class={`${variantClasses[variant]} ${className}`}>
+  <div class="px-6 py-24 sm:px-6 sm:py-32 lg:px-8">
+    <div class="mx-auto max-w-2xl text-center">
+      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">
+        {title}
+      </h2>
+      {description && (
+        <p class="mx-auto mt-6 max-w-xl text-lg leading-8 text-gray-300">
+          {description}
+        </p>
+      )}
+      {(primaryCTA || secondaryCTA) && (
+        <div class="mt-10 flex items-center justify-center gap-x-6 flex-wrap">
+          {primaryCTA && (
+            <Button 
+              variant="primary" 
+              size="lg"
+              href={primaryCTA.href}
+            >
+              {primaryCTA.text}
+            </Button>
+          )}
+          {secondaryCTA && (
+            <Button 
+              variant="ghost" 
+              size="lg"
+              href={secondaryCTA.href}
+            >
+              {secondaryCTA.text} <span aria-hidden="true">→</span>
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+</section>

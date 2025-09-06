@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urnlabs AI - Unified Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="theme_1.css">
+    <style>
+        /* Enhanced animations for unified dashboard */
+        @keyframes data-flow {
+            0% { transform: translateX(-100%); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateX(100%); opacity: 0; }
+        }
+        
+        @keyframes agent-pulse {
+            0%, 100% { 
+                box-shadow: 0 0 5px oklch(0.7080 0.2370 142.4953); 
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 20px oklch(0.7080 0.2370 142.4953); 
+                transform: scale(1.02);
+            }
+        }
+        
+        @keyframes typing-indicator {
+            0%, 60%, 100% { opacity: 1; }
+            30% { opacity: 0.4; }
+        }
+        
+        .data-flow::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 4px;
+            height: 60%;
+            background: linear-gradient(90deg, transparent, oklch(0.7080 0.2370 142.4953), transparent);
+            animation: data-flow 3s infinite;
+        }
+        
+        .agent-active {
+            animation: agent-pulse 3s infinite;
+        }
+        
+        .typing-indicator {
+            animation: typing-indicator 1.5s infinite;
+        }
+        
+        .service-indicator {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .connection-line {
+            height: 2px;
+            background: linear-gradient(90deg, oklch(0.7080 0.2370 142.4953), oklch(0.5931 0.2726 328.3634));
+            position: relative;
+        }
+        
+        .connection-line::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+            animation: data-flow 2s infinite;
+        }
+    </style>
+</head>
+<body style="background: oklch(0.0611 0 0); color: oklch(0.9851 0 0); font-family: var(--font-sans);">
+    <!-- Enhanced Header with Service Status -->
+    <header style="background: oklch(0.0824 0 0); border-bottom: 1px solid oklch(0.2046 0 0);" class="fixed top-0 left-0 right-0 z-50 h-20">
+        <div class="flex items-center justify-between h-full px-6">
+            <!-- Left side -->
+            <div class="flex items-center space-x-4">
+                <button id="sidebarToggle" class="p-2 rounded-md hover:bg-opacity-10 hover:bg-white transition-smooth">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center">
+                        <i data-lucide="cpu" class="w-6 h-6 text-black"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-semibold">Urnlabs AI Platform</h1>
+                        <p class="text-xs opacity-60">Unified Node.js + Go Agent System</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Center - Service Status Indicators -->
+            <div class="hidden md:flex items-center space-x-6">
+                <div class="flex items-center space-x-2 service-indicator">
+                    <div id="nodeStatus" class="w-3 h-3 rounded-full bg-gray-500"></div>
+                    <span class="text-sm">Node.js</span>
+                    <div class="connection-line w-8"></div>
+                </div>
+                
+                <div class="flex items-center space-x-2 service-indicator">
+                    <div id="bridgeStatus" class="w-3 h-3 rounded-full bg-gray-500"></div>
+                    <span class="text-sm">Bridge</span>
+                    <div class="connection-line w-8"></div>
+                </div>
+                
+                <div class="flex items-center space-x-2 service-indicator">
+                    <div id="goStatus" class="w-3 h-3 rounded-full bg-gray-500"></div>
+                    <span class="text-sm">Go/Maestro</span>
+                </div>
+            </div>
+            
+            <!-- Right side -->
+            <div class="flex items-center space-x-4">
+                <!-- Real-time Task Counter -->
+                <div class="flex items-center space-x-2 px-3 py-1 rounded-full" style="background: oklch(0.1648 0 0);">
+                    <div id="taskIndicator" class="w-2 h-2 rounded-full bg-green-400 typing-indicator"></div>
+                    <span class="text-sm font-mono" id="taskCounter">0 tasks</span>
+                </div>
+                
+                <!-- User Menu -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-purple-500 flex items-center justify-center text-sm font-medium text-black">
+                        A
+                    </div>
+                    <div class="hidden sm:block">
+                        <div class="text-sm font-medium">Admin</div>
+                        <div class="text-xs opacity-60">System Orchestrator</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Enhanced Sidebar with Agent Categories -->
+    <aside id="sidebar" style="background: oklch(0.0824 0 0); border-right: 1px solid oklch(0.2046 0 0);" class="fixed left-0 top-20 bottom-0 sidebar-expanded transition-all duration-300 z-40">
+        <nav class="p-4 space-y-4 h-full overflow-y-auto custom-scrollbar">
+            <!-- Dashboard Section -->
+            <div class="space-y-1">
+                <a href="#overview" class="nav-item active flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth" style="background: oklch(0.1648 0 0); color: oklch(0.7080 0.2370 142.4953);">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                    <span class="sidebar-text">Unified Overview</span>
+                </a>
+            </div>
+            
+            <!-- Agent Categories -->
+            <div class="space-y-2">
+                <div class="px-3 py-2 text-xs font-medium uppercase tracking-wider opacity-60">
+                    <span class="sidebar-text">Node.js Agents</span>
+                </div>
+                
+                <a href="#nodejs-agents" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                    <i data-lucide="code-2" class="w-5 h-5"></i>
+                    <span class="sidebar-text">Code Reviewer</span>
+                    <span class="sidebar-text ml-auto w-2 h-2 bg-green-400 rounded-full"></span>
+                </a>
+                
+                <a href="#nodejs-agents" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                    <i data-lucide="building" class="w-5 h-5"></i>
+                    <span class="sidebar-text">Architecture</span>
+                    <span class="sidebar-text ml-auto w-2 h-2 bg-green-400 rounded-full"></span>
+                </a>
+                
+                <a href="#nodejs-agents" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                    <i data-lucide="flask-conical" class="w-5 h-5"></i>
+                    <span class="sidebar-text">Testing</span>
+                    <span class="sidebar-text ml-auto w-2 h-2 bg-green-400 rounded-full"></span>
+                </a>
+            </div>
+            
+            <!-- Go/URN-MAESTRO Agents -->
+            <div class="space-y-2">
+                <div class="px-3 py-2 text-xs font-medium uppercase tracking-wider opacity-60">
+                    <span class="sidebar-text">URN-MAESTRO Agents</span>
+                </div>
+                
+                <a href="#go-agents" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                    <i data-lucide="server" class="w-5 h-5"></i>
+                    <span class="sidebar-text">DevOps</span>
+                    <span class="sidebar-text ml-auto text-xs px-2 py-1 rounded-full" style="background: oklch(0.6489 0.2370 26.9728); color: oklch(0.0611 0 0);">25+</span>
+                </a>
+                
+                <a href="#go-agents" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                    <i data-lucide="shield-check" class="w-5 h-5"></i>
+                    <span class="sidebar-text">SRE</span>
+                    <span class="sidebar-text ml-auto w-2 h-2 bg-blue-400 rounded-full"></span>
+                </a>
+                
+                <a href="#go-agents" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                    <i data-lucide="bug" class="w-5 h-5"></i>
+                    <span class="sidebar-text">QA & Security</span>
+                    <span class="sidebar-text ml-auto w-2 h-2 bg-purple-400 rounded-full"></span>
+                </a>
+                
+                <a href="#go-agents" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                    <i data-lucide="cloud" class="w-5 h-5"></i>
+                    <span class="sidebar-text">Cloud & K8s</span>
+                    <span class="sidebar-text ml-auto w-2 h-2 bg-cyan-400 rounded-full"></span>
+                </a>
+            </div>
+            
+            <!-- System Management -->
+            <div class="space-y-1">
+                <div class="px-3 py-2 text-xs font-medium uppercase tracking-wider opacity-60">
+                    <span class="sidebar-text">System</span>
+                </div>
+                
+                <a href="#monitoring" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                    <i data-lucide="activity" class="w-5 h-5"></i>
+                    <span class="sidebar-text">Monitoring</span>
+                    <span class="sidebar-text ml-auto w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                </a>
+                
+                <a href="#bridge-status" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                    <i data-lucide="git-merge" class="w-5 h-5"></i>
+                    <span class="sidebar-text">Bridge Status</span>
+                </a>
+                
+                <a href="#settings" class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-smooth hover:bg-opacity-10 hover:bg-white">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                    <span class="sidebar-text">Settings</span>
+                </a>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Enhanced Main Content -->
+    <main id="mainContent" class="flex-1 sidebar-expanded transition-all duration-300 ml-64 pt-20">
+        <div class="p-6 space-y-8">
+            <!-- Enhanced Stats Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                <!-- Total Agents -->
+                <div class="gradient-card p-6 rounded-lg hover-lift transition-smooth animate-fade-up">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium opacity-60">Total Agents</p>
+                            <p class="text-3xl font-bold mt-2" style="color: oklch(0.7080 0.2370 142.4953);" id="totalAgents">29</p>
+                        </div>
+                        <div class="p-3 rounded-full" style="background: oklch(0.7080 0.2370 142.4953); color: oklch(0.0611 0 0);">
+                            <i data-lucide="cpu" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs opacity-60">4 Node.js + 25 Go</div>
+                </div>
+                
+                <!-- Node.js Agents -->
+                <div class="gradient-card p-6 rounded-lg hover-lift transition-smooth animate-fade-up" style="animation-delay: 0.1s;">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium opacity-60">Node.js</p>
+                            <p class="text-3xl font-bold mt-2" style="color: oklch(0.5931 0.2726 328.3634);" id="nodeAgents">4</p>
+                        </div>
+                        <div class="p-3 rounded-full" style="background: oklch(0.5931 0.2726 328.3634); color: oklch(0.0611 0 0);">
+                            <i data-lucide="layers" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center space-x-2">
+                        <i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>
+                        <span class="text-sm text-green-400">All Active</span>
+                    </div>
+                </div>
+                
+                <!-- Go/URN-MAESTRO Agents -->
+                <div class="gradient-card p-6 rounded-lg hover-lift transition-smooth animate-fade-up" style="animation-delay: 0.2s;">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium opacity-60">URN-MAESTRO</p>
+                            <p class="text-3xl font-bold mt-2" style="color: oklch(0.6489 0.2370 26.9728);" id="goAgents">25</p>
+                        </div>
+                        <div class="p-3 rounded-full" style="background: oklch(0.6489 0.2370 26.9728); color: oklch(0.0611 0 0);">
+                            <i data-lucide="zap" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center space-x-2">
+                        <i data-lucide="trending-up" class="w-4 h-4 text-green-400"></i>
+                        <span class="text-sm text-green-400">High Performance</span>
+                    </div>
+                </div>
+                
+                <!-- Running Tasks -->
+                <div class="gradient-card p-6 rounded-lg hover-lift transition-smooth animate-fade-up" style="animation-delay: 0.3s;">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium opacity-60">Active Tasks</p>
+                            <p class="text-3xl font-bold mt-2" style="color: oklch(0.5635 0.2408 260.8178);" id="activeTasks">8</p>
+                        </div>
+                        <div class="p-3 rounded-full agent-active" style="background: oklch(0.5635 0.2408 260.8178); color: oklch(0.0611 0 0);">
+                            <i data-lucide="play-circle" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center space-x-2">
+                        <div class="w-full bg-gray-700 rounded-full h-2">
+                            <div class="h-2 rounded-full gradient-primary" style="width: 65%; transition: width 0.8s ease-out;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- System Health -->
+                <div class="gradient-card p-6 rounded-lg hover-lift transition-smooth animate-fade-up" style="animation-delay: 0.4s;">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium opacity-60">System Health</p>
+                            <p class="text-2xl font-bold mt-2 text-green-400" id="systemHealth">Excellent</p>
+                        </div>
+                        <div class="p-3 rounded-full bg-green-400 text-black">
+                            <i data-lucide="heart" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs opacity-60" id="healthScore">Score: 98/100</div>
+                </div>
+            </div>
+
+            <!-- Service Architecture Diagram -->
+            <div class="gradient-card p-6 rounded-lg">
+                <h3 class="text-lg font-semibold mb-4 flex items-center space-x-2">
+                    <i data-lucide="network" class="w-5 h-5"></i>
+                    <span>Unified Architecture</span>
+                </h3>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+                    <!-- Node.js Services -->
+                    <div class="text-center">
+                        <div class="p-6 rounded-xl" style="background: oklch(0.1648 0 0); border: 2px solid oklch(0.5931 0.2726 328.3634);">
+                            <i data-lucide="layers" class="w-12 h-12 mx-auto mb-3" style="color: oklch(0.5931 0.2726 328.3634);"></i>
+                            <h4 class="font-semibold">Node.js Services</h4>
+                            <p class="text-sm opacity-60 mt-2">API, Agents, Dashboard</p>
+                            <div class="mt-4 flex justify-center space-x-2">
+                                <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                                <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                                <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                            </div>
+                        </div>
+                        <div class="text-xs mt-2 opacity-60">Port 3000-3003</div>
+                    </div>
+                    
+                    <!-- Bridge Service -->
+                    <div class="text-center">
+                        <div class="p-6 rounded-xl relative" style="background: oklch(0.1648 0 0); border: 2px solid oklch(0.7080 0.2370 142.4953);">
+                            <div class="data-flow"></div>
+                            <i data-lucide="git-merge" class="w-12 h-12 mx-auto mb-3" style="color: oklch(0.7080 0.2370 142.4953);"></i>
+                            <h4 class="font-semibold">Bridge Service</h4>
+                            <p class="text-sm opacity-60 mt-2">API Translation Layer</p>
+                            <div class="mt-4">
+                                <div class="w-2 h-2 bg-green-400 rounded-full mx-auto animate-pulse"></div>
+                            </div>
+                        </div>
+                        <div class="text-xs mt-2 opacity-60">Port 3002</div>
+                    </div>
+                    
+                    <!-- Go/URN-MAESTRO -->
+                    <div class="text-center">
+                        <div class="p-6 rounded-xl" style="background: oklch(0.1648 0 0); border: 2px solid oklch(0.6489 0.2370 26.9728);">
+                            <i data-lucide="zap" class="w-12 h-12 mx-auto mb-3" style="color: oklch(0.6489 0.2370 26.9728);"></i>
+                            <h4 class="font-semibold">URN-MAESTRO</h4>
+                            <p class="text-sm opacity-60 mt-2">Go Enterprise CLI</p>
+                            <div class="mt-4 flex justify-center space-x-1">
+                                <div class="w-1 h-1 bg-blue-400 rounded-full"></div>
+                                <div class="w-1 h-1 bg-purple-400 rounded-full"></div>
+                                <div class="w-1 h-1 bg-cyan-400 rounded-full"></div>
+                                <div class="w-1 h-1 bg-yellow-400 rounded-full"></div>
+                                <div class="w-1 h-1 bg-green-400 rounded-full"></div>
+                            </div>
+                        </div>
+                        <div class="text-xs mt-2 opacity-60">Port 8081-8082</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agent Performance Comparison -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Node.js Agent Details -->
+                <div class="gradient-card p-6 rounded-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold">Node.js Agents</h3>
+                        <div class="text-sm px-3 py-1 rounded-full bg-purple-500 bg-opacity-20 text-purple-300">
+                            4 Active
+                        </div>
+                    </div>
+                    <div id="nodeAgentList" class="space-y-3">
+                        <!-- Agent items will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Go/URN-MAESTRO Agent Categories -->
+                <div class="gradient-card p-6 rounded-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold">URN-MAESTRO Agents</h3>
+                        <div class="text-sm px-3 py-1 rounded-full bg-orange-500 bg-opacity-20 text-orange-300">
+                            25+ Agents
+                        </div>
+                    </div>
+                    <div id="goAgentCategories" class="space-y-3">
+                        <!-- Agent categories will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Activity Feed -->
+            <div class="gradient-card p-6 rounded-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">Live System Activity</h3>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span class="text-sm opacity-60">Real-time</span>
+                    </div>
+                </div>
+                <div id="unifiedActivityFeed" class="space-y-3 max-h-80 overflow-y-auto custom-scrollbar">
+                    <!-- Activity items will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Enhanced JavaScript for unified dashboard
+        lucide.createIcons();
+        
+        // Configuration
+        const config = {
+            apiUrl: 'http://localhost:3000',
+            bridgeUrl: 'http://localhost:3002',
+            maestroUrl: 'http://localhost:8081',
+            wsUrl: 'ws://localhost:3002/ws'
+        };
+
+        // Global state
+        let websocket = null;
+        let systemMetrics = {
+            nodeAgents: 4,
+            goAgents: 25,
+            activeTasks: 0,
+            totalTasks: 0
+        };
+
+        // Initialize dashboard
+        async function initializeDashboard() {
+            await checkServiceHealth();
+            await loadAgentData();
+            setupWebSocket();
+            startMetricsUpdates();
+            
+            // Sidebar functionality
+            setupSidebarToggle();
+        }
+
+        // Check health of all services
+        async function checkServiceHealth() {
+            const services = [
+                { name: 'nodeStatus', url: `${config.apiUrl}/health`, label: 'Node.js' },
+                { name: 'bridgeStatus', url: `${config.bridgeUrl}/health`, label: 'Bridge' },
+                { name: 'goStatus', url: `${config.maestroUrl}/health`, label: 'Go/Maestro' }
+            ];
+
+            for (const service of services) {
+                try {
+                    const response = await fetch(service.url);
+                    const statusElement = document.getElementById(service.name);
+                    
+                    if (response.ok) {
+                        statusElement.className = 'w-3 h-3 rounded-full bg-green-400 animate-pulse';
+                    } else {
+                        statusElement.className = 'w-3 h-3 rounded-full bg-yellow-400';
+                    }
+                } catch (error) {
+                    const statusElement = document.getElementById(service.name);
+                    statusElement.className = 'w-3 h-3 rounded-full bg-red-400';
+                }
+            }
+        }
+
+        // Load unified agent data
+        async function loadAgentData() {
+            try {
+                const response = await fetch(`${config.bridgeUrl}/agents`);
+                const data = await response.json();
+                
+                systemMetrics.nodeAgents = data.agents.filter(a => a.source === 'nodejs').length;
+                systemMetrics.goAgents = data.agents.filter(a => a.source === 'go').length;
+                
+                updateAgentDisplays(data.agents);
+                updateMetricsDisplay();
+            } catch (error) {
+                console.error('Failed to load agent data:', error);
+                showErrorMessage('Failed to load agent data');
+            }
+        }
+
+        // Update agent displays
+        function updateAgentDisplays(agents) {
+            const nodeAgents = agents.filter(a => a.source === 'nodejs');
+            const goAgents = agents.filter(a => a.source === 'go');
+            
+            // Update Node.js agents
+            const nodeAgentList = document.getElementById('nodeAgentList');
+            nodeAgentList.innerHTML = nodeAgents.map(agent => `
+                <div class="flex items-center justify-between p-3 rounded-md hover:bg-opacity-5 hover:bg-white transition-smooth">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                        <div>
+                            <p class="text-sm font-medium">${agent.name}</p>
+                            <p class="text-xs opacity-60">${agent.description}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-green-400">Active</p>
+                        <p class="text-xs opacity-60">${agent.capabilities?.length || 0} caps</p>
+                    </div>
+                </div>
+            `).join('');
+
+            // Update Go agent categories
+            const goCategories = categorizeGoAgents(goAgents);
+            const goAgentCategories = document.getElementById('goAgentCategories');
+            goAgentCategories.innerHTML = Object.entries(goCategories).map(([category, agents]) => `
+                <div class="flex items-center justify-between p-3 rounded-md hover:bg-opacity-5 hover:bg-white transition-smooth">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 rounded-full ${getCategoryColor(category)}"></div>
+                        <div>
+                            <p class="text-sm font-medium">${category}</p>
+                            <p class="text-xs opacity-60">${agents.length} agents</p>
+                        </div>
+                    </div>
+                    <div class="text-xs px-2 py-1 rounded-full bg-gray-600 bg-opacity-30">
+                        ${agents.length}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Categorize Go agents
+        function categorizeGoAgents(goAgents) {
+            const categories = {
+                'DevOps & Infrastructure': [],
+                'Security & QA': [],
+                'Cloud & Kubernetes': [],
+                'AI & Analysis': [],
+                'Development Tools': []
+            };
+
+            goAgents.forEach(agent => {
+                if (agent.type.includes('devops') || agent.type.includes('deploy') || agent.type.includes('infra')) {
+                    categories['DevOps & Infrastructure'].push(agent);
+                } else if (agent.type.includes('security') || agent.type.includes('qa') || agent.type.includes('audit')) {
+                    categories['Security & QA'].push(agent);
+                } else if (agent.type.includes('cloud') || agent.type.includes('kubernetes') || agent.type.includes('k8s')) {
+                    categories['Cloud & Kubernetes'].push(agent);
+                } else if (agent.type.includes('ai') || agent.type.includes('analysis') || agent.type.includes('analyze')) {
+                    categories['AI & Analysis'].push(agent);
+                } else {
+                    categories['Development Tools'].push(agent);
+                }
+            });
+
+            return categories;
+        }
+
+        // Get category color
+        function getCategoryColor(category) {
+            const colors = {
+                'DevOps & Infrastructure': 'bg-blue-400',
+                'Security & QA': 'bg-red-400',
+                'Cloud & Kubernetes': 'bg-cyan-400',
+                'AI & Analysis': 'bg-purple-400',
+                'Development Tools': 'bg-green-400'
+            };
+            return colors[category] || 'bg-gray-400';
+        }
+
+        // Setup WebSocket connection
+        function setupWebSocket() {
+            if (websocket) {
+                websocket.close();
+            }
+
+            websocket = new WebSocket(config.wsUrl);
+            
+            websocket.onopen = () => {
+                console.log('WebSocket connected');
+                websocket.send(JSON.stringify({
+                    type: 'subscribe',
+                    data: { channels: ['system', 'agents', 'tasks'] }
+                }));
+            };
+
+            websocket.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                handleWebSocketMessage(message);
+            };
+
+            websocket.onclose = () => {
+                console.log('WebSocket disconnected, reconnecting...');
+                setTimeout(setupWebSocket, 5000);
+            };
+
+            websocket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        // Handle WebSocket messages
+        function handleWebSocketMessage(message) {
+            switch (message.type) {
+                case 'task_executed':
+                    systemMetrics.totalTasks++;
+                    updateActivityFeed(message.data);
+                    updateMetricsDisplay();
+                    break;
+                    
+                case 'agent_status_update':
+                    updateAgentStatus(message.data);
+                    break;
+                    
+                case 'system_health_update':
+                    updateSystemHealth(message.data);
+                    break;
+            }
+        }
+
+        // Update activity feed
+        function updateActivityFeed(data) {
+            const feed = document.getElementById('unifiedActivityFeed');
+            const activityElement = document.createElement('div');
+            activityElement.className = 'flex items-start space-x-3 p-3 rounded-md hover:bg-opacity-5 hover:bg-white transition-smooth animate-fade-up';
+            
+            const sourceColor = data.agentType?.includes('nodejs') ? 'text-purple-400' : 'text-orange-400';
+            const icon = getTaskIcon(data.task);
+            
+            activityElement.innerHTML = `
+                <div class="flex-shrink-0 mt-1">
+                    <i data-lucide="${icon}" class="w-4 h-4 ${sourceColor}"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm">${data.task || 'Task executed'}</p>
+                    <div class="flex items-center space-x-2 mt-1">
+                        <span class="text-xs ${sourceColor}">${data.agentType || 'Unknown Agent'}</span>
+                        <span class="text-xs opacity-40">•</span>
+                        <span class="text-xs opacity-60">${new Date(data.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                </div>
+                <div class="flex-shrink-0">
+                    <div class="text-xs px-2 py-1 rounded-full ${data.result?.success ? 'bg-green-500 bg-opacity-20 text-green-300' : 'bg-red-500 bg-opacity-20 text-red-300'}">
+                        ${data.result?.success ? 'Success' : 'Failed'}
+                    </div>
+                </div>
+            `;
+            
+            feed.insertBefore(activityElement, feed.firstChild);
+            
+            // Keep only last 50 items
+            if (feed.children.length > 50) {
+                feed.removeChild(feed.lastChild);
+            }
+            
+            // Re-initialize icons
+            lucide.createIcons();
+        }
+
+        // Get task icon
+        function getTaskIcon(task) {
+            if (task?.includes('deploy')) return 'rocket';
+            if (task?.includes('test')) return 'flask-conical';
+            if (task?.includes('security')) return 'shield';
+            if (task?.includes('code')) return 'code-2';
+            if (task?.includes('monitor')) return 'activity';
+            return 'play-circle';
+        }
+
+        // Update metrics display
+        function updateMetricsDisplay() {
+            document.getElementById('totalAgents').textContent = systemMetrics.nodeAgents + systemMetrics.goAgents;
+            document.getElementById('nodeAgents').textContent = systemMetrics.nodeAgents;
+            document.getElementById('goAgents').textContent = systemMetrics.goAgents;
+            document.getElementById('activeTasks').textContent = systemMetrics.activeTasks;
+            document.getElementById('taskCounter').textContent = `${systemMetrics.totalTasks} tasks`;
+        }
+
+        // Setup sidebar toggle
+        function setupSidebarToggle() {
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            let sidebarCollapsed = false;
+            
+            sidebarToggle.addEventListener('click', () => {
+                sidebarCollapsed = !sidebarCollapsed;
+                
+                if (sidebarCollapsed) {
+                    sidebar.classList.remove('sidebar-expanded');
+                    sidebar.classList.add('sidebar-collapsed');
+                    mainContent.classList.remove('sidebar-expanded');
+                    mainContent.classList.add('sidebar-collapsed');
+                    mainContent.style.marginLeft = '4rem';
+                    
+                    document.querySelectorAll('.sidebar-text').forEach(el => {
+                        el.style.display = 'none';
+                    });
+                } else {
+                    sidebar.classList.remove('sidebar-collapsed');
+                    sidebar.classList.add('sidebar-expanded');
+                    mainContent.classList.remove('sidebar-collapsed');
+                    mainContent.classList.add('sidebar-expanded');
+                    mainContent.style.marginLeft = '16rem';
+                    
+                    document.querySelectorAll('.sidebar-text').forEach(el => {
+                        el.style.display = 'block';
+                    });
+                }
+            });
+        }
+
+        // Start periodic updates
+        function startMetricsUpdates() {
+            setInterval(async () => {
+                await checkServiceHealth();
+                await loadAgentData();
+            }, 30000); // Update every 30 seconds
+        }
+
+        // Show error message
+        function showErrorMessage(message) {
+            console.error(message);
+            // Could add toast notification here
+        }
+
+        // Navigation functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeDashboard();
+            
+            // Navigation handling
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    
+                    document.querySelectorAll('.nav-item').forEach(nav => {
+                        nav.classList.remove('active');
+                        nav.style.background = 'transparent';
+                        nav.style.color = 'oklch(0.9851 0 0)';
+                    });
+                    
+                    item.classList.add('active');
+                    item.style.background = 'oklch(0.1648 0 0)';
+                    item.style.color = 'oklch(0.7080 0.2370 142.4953)';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

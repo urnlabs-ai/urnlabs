@@ -1,0 +1,67 @@
+services:
+  # API Service (when running in Docker)
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: dev
+    container_name: urnlabs-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev
+      - REDIS_URL=redis://host.docker.internal:6379
+      - JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  # Agent Service (when running in Docker)
+  agents:
+    build:
+      context: .
+      dockerfile: apps/agents/Dockerfile
+      target: dev
+    container_name: urnlabs-agents
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev
+      - REDIS_URL=redis://host.docker.internal:6379
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - AGENT_SERVICE_PORT=3001
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+
+  # API Bridge Service (Go <-> Node.js)
+  bridge:
+    build:
+      context: .
+      dockerfile: apps/bridge/Dockerfile
+      target: dev
+    container_name: urnlabs-bridge
+    ports:
+      - "3004:3002"
+    environment:
+      - NODE_ENV=development
+      - BRIDGE_PORT=3002
+      - API_ENDPOINT=http://api:3000
+      - AGENTS_ENDPOINT=http://agents:3001
+      - REDIS_URL=redis://host.docker.internal:6379
+    depends_on:
+      - api
+      - agents
+    volumes:
+      - shared_data:/shared
+
+volumes:
+  shared_data:
+
+networks:
+  default:
+    name: urnlabs-network
+    driver: bridge
