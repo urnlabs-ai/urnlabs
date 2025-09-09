@@ -63,6 +63,89 @@
     "mcp-compass": {
       "command": "npx",
       "args": ["@modelcontextprotocol/server-compass"]
+    },
+    "superdesign": {
+      "command": "npx",
+      "args": ["@superdesign/mcp-server"],
+      "env": {
+        "DESIGN_SYSTEM_PATH": "/Users/muhammadusmanramzan/Desktop/work/urnlabs-ai/urnlabs/.superdesign",
+        "COMPONENT_LIBRARY": "shadcn-ui"
+      }
+    },
+    "code-rabbit": {
+      "command": "npx",
+      "args": ["@code-rabbit/mcp-server"],
+      "env": {
+        "AI_MODEL": "claude-3-5-sonnet",
+        "CONTEXT_WINDOW": "200k",
+        "LANGUAGE": "typescript"
+      }
+    },
+    "kilo-code": {
+      "command": "npx",
+      "args": ["@kilo-code/mcp-server"],
+      "env": {
+        "ANALYTICS_ENDPOINT": "${KILO_ANALYTICS_URL}",
+        "PROJECT_ID": "urnlabs",
+        "TECH_STACK": "typescript,react,nodejs"
+      }
+    },
+    "traycer": {
+      "command": "npx",
+      "args": ["@traycer/mcp-server"],
+      "env": {
+        "TRACE_ENDPOINT": "${TRACE_COLLECTOR_URL}",
+        "SERVICE_NAME": "urnlabs-platform"
+      }
+    },
+    "github-copilot": {
+      "command": "npx",
+      "args": ["@github/copilot-mcp-server"],
+      "env": {
+        "COPILOT_API_KEY": "${GITHUB_COPILOT_TOKEN}"
+      }
+    },
+    "gitlens": {
+      "command": "npx",
+      "args": ["@gitkraken/gitlens-mcp-server"],
+      "env": {
+        "GITLENS_API_KEY": "${GITLENS_API_KEY}"
+      }
+    },
+    "prettier": {
+      "command": "npx",
+      "args": ["@prettier/mcp-server"],
+      "env": {
+        "PRETTIER_CONFIG": ".prettierrc"
+      }
+    },
+    "eslint": {
+      "command": "npx",
+      "args": ["@eslint/mcp-server"],
+      "env": {
+        "ESLINT_CONFIG": "eslint.config.js"
+      }
+    },
+    "typescript": {
+      "command": "npx",
+      "args": ["@typescript/mcp-server"],
+      "env": {
+        "TS_CONFIG": "tsconfig.json"
+      }
+    },
+    "tailwind": {
+      "command": "npx",
+      "args": ["@tailwindcss/mcp-server"],
+      "env": {
+        "TAILWIND_CONFIG": "tailwind.config.ts"
+      }
+    },
+    "storybook": {
+      "command": "npx",
+      "args": ["@storybook/mcp-server"],
+      "env": {
+        "STORYBOOK_CONFIG": ".storybook"
+      }
     }
   }
 }

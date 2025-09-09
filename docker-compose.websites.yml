@@ -1,0 +1,99 @@
+services:
+  usmanramzan-ai:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.astro
+      args:
+        SITE_NAME: usmanramzan-ai
+        SITE_TITLE: "Usman Ramzan AI - Personal AI Portfolio"
+    ports:
+      - "8001:4321"
+    volumes:
+      - ./worktrees/usmanramzan-ai:/app
+      - node_modules_usmanramzan:/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - SITE_URL=http://localhost:8001
+    networks:
+      - websites-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4321"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  urnlabs-ai:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.astro
+      args:
+        SITE_NAME: urnlabs-ai
+        SITE_TITLE: "UrnLabs AI - AI Agent Platform"
+    ports:
+      - "8002:4321"
+    volumes:
+      - ./worktrees/urnlabs-ai:/app
+      - node_modules_urnlabs:/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - SITE_URL=http://localhost:8002
+    networks:
+      - websites-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4321"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  eprecisio-com:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.astro
+      args:
+        SITE_NAME: eprecisio-com
+        SITE_TITLE: "EPrecisio - DevOps Consulting Excellence"
+    ports:
+      - "8003:4321"
+    volumes:
+      - ./worktrees/eprecisio-com:/app
+      - node_modules_eprecisio:/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - SITE_URL=http://localhost:8003
+    networks:
+      - websites-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4321"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Development proxy for cross-site testing
+  nginx-proxy:
+    image: nginx:alpine
+    ports:
+      - "8000:80"
+    volumes:
+      - ./docker/nginx-websites.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - usmanramzan-ai
+      - urnlabs-ai
+      - eprecisio-com
+    networks:
+      - websites-network
+    restart: unless-stopped
+
+networks:
+  websites-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+volumes:
+  node_modules_usmanramzan:
+  node_modules_urnlabs:
+  node_modules_eprecisio:
