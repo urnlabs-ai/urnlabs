@@ -1,0 +1,61 @@
+{
+  "name": "@urnlabs/ai-agents",
+  "version": "1.0.0",
+  "description": "Production-ready AI agent system with deterministic workflows and governance",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "vitest",
+    "test:unit": "vitest --run src/__tests__/**/*.test.ts --exclude=src/__tests__/integration/**",
+    "test:integration": "vitest --run src/__tests__/integration/**/*.test.ts",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "test:ui": "vitest --ui",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "ci": "npm run lint && npm run typecheck && npm run test:coverage"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.3",
+    "@openai/api": "^4.47.3",
+    "zod": "^3.23.8",
+    "uuid": "^10.0.0",
+    "winston": "^3.13.0",
+    "ioredis": "^5.4.1",
+    "prisma": "^5.15.0",
+    "@prisma/client": "^5.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.8.0",
+    "@typescript-eslint/parser": "^7.8.0",
+    "eslint": "^8.57.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0",
+    "@vitest/coverage-v8": "^1.6.0",
+    "@vitest/ui": "^1.6.0"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "workflow",
+    "automation",
+    "governance",
+    "enterprise"
+  ],
+  "author": "URN Labs",
+  "license": "MIT"
+}

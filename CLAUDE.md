@@ -20,6 +20,7 @@ Transform the current marketing website into a complete production-ready AI agen
 - **Monitoring**: Custom telemetry + external APM
 - **Deployment**: GitHub Actions with Docker containers
 - **AI Integration**: Claude Code MCP servers for orchestration
+- **Container Orchestration**: Unified Docker Compose for local development
 
 ### Directory Structure
 ```
@@ -33,12 +34,20 @@ urnlabs/
 │   ├── api/                   # Backend API service
 │   ├── dashboard/             # Admin/user dashboard
 │   ├── agents/                # AI agent services
+│   ├── gateway/               # API Gateway service
+│   ├── bridge/                # Go-Node.js bridge service
 │   └── urnlabs/              # Enhanced marketing site
 ├── packages/
 │   ├── ai-agents/            # AI agent utilities
 │   ├── database/             # Database schemas and ORM
 │   ├── auth/                 # Authentication services
-│   └── monitoring/           # Monitoring and analytics
+│   ├── monitoring/           # Monitoring and analytics
+│   ├── mcp-integration/      # MCP server integration
+│   ├── testing/              # Testing and QA services
+│   └── security/             # Security and compliance
+├── docker/                   # Docker configuration files
+├── worktrees/                # Website worktrees for deployment
+└── docker-compose-local.yml  # Unified Docker Compose configuration
 ```
 
 ## Development Principles
@@ -238,6 +247,32 @@ urnlabs/
 
 ## Getting Started
 
+### Local Development with Docker Compose
+1. **Environment Setup**: Copy environment variables
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Start All Services**: Use the unified Docker Compose configuration
+   ```bash
+   docker-compose -f docker-compose-local.yml up -d
+   ```
+
+3. **Access Services**: All services will be available at:
+   - Gateway: http://localhost:7000 (main entry point)
+   - API: http://localhost:7001
+   - Agents: http://localhost:7002
+   - Dashboard: http://localhost:7004
+   - Websites: http://localhost:80 (with Nginx routing)
+
+4. **Health Check**: Verify all services are running
+   ```bash
+   docker-compose -f docker-compose-local.yml ps
+   ```
+
+5. **First Feature**: Create with `/create-feature demo --type=full`
+
+### Traditional Development Setup
 1. **Environment Setup**: Use `/setup-dev-environment` command
 2. **Database Initialization**: Run `/init-database --with-seed-data`
 3. **Service Dependencies**: Execute `/start-services --mode=development`
@@ -259,6 +294,40 @@ urnlabs/
 - Data integrity validation
 - Performance baseline restoration
 - User communication protocols
+
+## Docker Compose Configuration
+
+The project now includes a unified Docker Compose configuration (`docker-compose-local.yml`) that allows you to run all services with a single command:
+
+### Services Included
+- **Backend Services**: Gateway, API, Agents, Bridge, Dashboard, URN-Maestro, Monitoring, MCP Integration, Testing, and Security
+- **Dependencies**: PostgreSQL, Redis, Prometheus, and Grafana
+- **Web Applications**: UrnLabs, UsmanRamzan, and UsmanRamzan-AI websites
+- **Reverse Proxy**: Nginx for routing to web applications
+
+### Key Features
+- **Unified Development**: All services started with one command
+- **Health Checks**: All services include health monitoring
+- **Volume Management**: Persistent data storage for databases and services
+- **Network Configuration**: Isolated network for service communication
+- **Environment Variables**: Centralized configuration management
+
+### Common Commands
+```bash
+# Start all services
+docker-compose -f docker-compose-local.yml up -d
+
+# View logs
+docker-compose -f docker-compose-local.yml logs -f
+
+# Stop all services
+docker-compose -f docker-compose-local.yml down
+
+# Rebuild services
+docker-compose -f docker-compose-local.yml up -d --build
+```
+
+For detailed setup instructions, refer to `DOCKER-COMPOSE-LOCAL.md`.
 
 ---
 
