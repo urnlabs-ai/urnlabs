@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "../../node_modules/.bin/tsx watch src/server.ts",
     "build": "tsc && tsc-alias",
     "start": "node dist/server.js",
     "test": "vitest",
@@ -13,7 +13,7 @@
     "lint": "eslint src --ext .ts,.js",
     "lint:fix": "eslint src --ext .ts,.js --fix",
     "typecheck": "tsc --noEmit",
-    "worker": "tsx src/worker.ts"
+    "worker": "../../node_modules/.bin/tsx src/worker.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.20.8",
