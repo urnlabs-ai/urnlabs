@@ -1,0 +1,96 @@
+{
+  "agents": {
+    "superdesign-ui-architect": {
+      "name": "SuperDesign UI Architect",
+      "description": "Advanced UI/UX design architect with SuperDesign integration for urnlabs platform",
+      "systemPrompt": "You are a UI/UX architect specializing in modern web design using SuperDesign tools. You create responsive, accessible, and aesthetically pleasing user interfaces with component-based architecture. Focus on design systems, user experience optimization, and brand consistency.",
+      "tools": ["superdesign", "filesystem", "github", "prettier", "tailwind"],
+      "capabilities": [
+        "Design system creation and maintenance",
+        "Component library development with SuperDesign",
+        "Responsive design implementation",
+        "Accessibility compliance (WCAG 2.1 AA)",
+        "Brand guideline enforcement",
+        "User experience optimization",
+        "Design token management",
+        "Interactive prototype creation"
+      ],
+      "specializations": ["Design Systems", "UI Components", "User Experience", "Accessibility", "Branding"],
+      "integrations": {
+        "superdesign": {
+          "design_system_path": ".superdesign",
+          "component_library": "shadcn-ui",
+          "auto_generation": true,
+          "theme_management": true
+        }
+      }
+    },
+    "superdesign-component-generator": {
+      "name": "SuperDesign Component Generator",
+      "description": "Automated component generation and optimization agent using SuperDesign workflows",
+      "systemPrompt": "You are a component generation specialist using SuperDesign tools to create, optimize, and maintain UI components. Generate production-ready components with proper TypeScript definitions, styling, and documentation.",
+      "tools": ["superdesign", "code-rabbit", "typescript", "storybook", "prettier"],
+      "capabilities": [
+        "Automated component generation from designs",
+        "TypeScript component definitions",
+        "Storybook story creation",
+        "Component documentation generation",
+        "Design-to-code conversion",
+        "Component variant management",
+        "Props interface generation",
+        "CSS-in-JS optimization"
+      ],
+      "specializations": ["Component Generation", "TypeScript", "Storybook", "Design Systems"],
+      "integrations": {
+        "superdesign": {
+          "auto_component_generation": true,
+          "typescript_definitions": true,
+          "storybook_integration": true
+        },
+        "code_rabbit": {
+          "component_optimization": true,
+          "code_review": true
+        }
+      }
+    },
+    "superdesign-theme-manager": {
+      "name": "SuperDesign Theme Manager", 
+      "description": "Theme and design token management specialist using SuperDesign infrastructure",
+      "systemPrompt": "You are a design token and theme management expert using SuperDesign tools. Manage color palettes, typography, spacing systems, and ensure consistent theming across applications.",
+      "tools": ["superdesign", "tailwind", "filesystem", "prettier"],
+      "capabilities": [
+        "Design token generation and management",
+        "Theme switching implementation",
+        "Color palette optimization",
+        "Typography system management",
+        "Spacing scale optimization",
+        "CSS custom properties generation",
+        "Dark mode implementation",
+        "Brand color consistency"
+      ],
+      "specializations": ["Design Tokens", "Theming", "Color Systems", "Typography"],
+      "integrations": {
+        "superdesign": {
+          "theme_generation": true,
+          "token_management": true,
+          "css_variable_export": true
+        }
+      }
+    }
+  },
+  "workflows": {
+    "superdesign-ui-development": {
+      "name": "SuperDesign UI Development Pipeline",
+      "description": "Complete UI development workflow using SuperDesign tools and agents",
+      "agents": ["superdesign-ui-architect", "superdesign-component-generator", "superdesign-theme-manager"],
+      "steps": [
+        "UI/UX requirements analysis and design system planning",
+        "Component architecture design with SuperDesign integration",
+        "Automated component generation and optimization",
+        "Theme and design token implementation",
+        "Accessibility validation and optimization",
+        "Component documentation and Storybook integration"
+      ]
+    }
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "analytics_agents": {
+    "kilocode-ai-platform-analyst": {
+      "name": "KiloCode AI Platform Analytics Specialist",
+      "description": "AI platform development analytics and metrics specialist using KiloCode for comprehensive code insights",
+      "systemPrompt": "You are an AI platform analytics specialist using KiloCode to provide deep insights into AI platform development metrics, code quality, team productivity, and technical debt. Focus on AI-specific metrics like model integration efficiency, API performance, and agent orchestration patterns.",
+      "tools": ["kilo-code", "traycer", "github", "sequential-thinking"],
+      "capabilities": [
+        "AI platform code quality analysis",
+        "Development velocity and productivity metrics",
+        "Technical debt identification and prioritization",
+        "Team collaboration and code review analytics",
+        "AI integration pattern analysis",
+        "Performance bottleneck identification",
+        "Security vulnerability trend analysis",
+        "Code complexity and maintainability scoring"
+      ],
+      "specializations": ["AI Platform Analytics", "Code Quality Metrics", "Development Productivity", "Technical Debt Management"],
+      "integrations": {
+        "kilo_code": {
+          "project_id": "urnlabs",
+          "tech_stack": "typescript,astro,react,nodejs",
+          "analytics_focus": ["ai_integration", "performance", "quality", "security"],
+          "reporting_frequency": "daily"
+        }
+      }
+    },
+    "kilocode-team-productivity-analyst": {
+      "name": "KiloCode Team Productivity Analyst",
+      "description": "Development team productivity and collaboration analytics specialist using KiloCode insights",
+      "systemPrompt": "You are a team productivity analyst using KiloCode to analyze development team performance, collaboration patterns, and workflow efficiency. Provide actionable insights to improve team velocity, reduce blockers, and optimize development processes.",
+      "tools": ["kilo-code", "github", "slack", "memory-bank"],
+      "capabilities": [
+        "Team velocity and throughput analysis",
+        "Code review efficiency metrics",
+        "Collaboration pattern identification",
+        "Developer productivity scoring",
+        "Workflow bottleneck analysis",
+        "Knowledge sharing effectiveness",
+        "Onboarding time optimization",
+        "Team health and satisfaction metrics"
+      ],
+      "specializations": ["Team Analytics", "Productivity Optimization", "Workflow Analysis", "Collaboration Metrics"],
+      "integrations": {
+        "kilo_code": {
+          "team_analytics": true,
+          "productivity_dashboards": true,
+          "collaboration_insights": true,
+          "performance_tracking": true
+        }
+      }
+    },
+    "kilocode-quality-assurance-specialist": {
+      "name": "KiloCode Quality Assurance Specialist", 
+      "description": "Code quality and testing analytics specialist using KiloCode for quality insights",
+      "systemPrompt": "You are a quality assurance specialist using KiloCode to monitor code quality trends, testing effectiveness, and quality gate compliance. Focus on identifying quality improvement opportunities and preventing technical debt accumulation.",
+      "tools": ["kilo-code", "github", "prettier", "eslint"],
+      "capabilities": [
+        "Code quality trend analysis",
+        "Test coverage effectiveness monitoring",
+        "Bug detection and prevention analytics",
+        "Code review quality assessment", 
+        "Technical debt accumulation tracking",
+        "Quality gate compliance monitoring",
+        "Refactoring opportunity identification",
+        "Best practices adherence scoring"
+      ],
+      "specializations": ["Quality Analytics", "Testing Metrics", "Technical Debt", "Code Standards"],
+      "integrations": {
+        "kilo_code": {
+          "quality_metrics": true,
+          "testing_analytics": true,
+          "debt_tracking": true,
+          "compliance_monitoring": true
+        }
+      }
+    },
+    "kilocode-performance-optimizer": {
+      "name": "KiloCode Performance Analytics Specialist",
+      "description": "Application performance and optimization analytics specialist using KiloCode metrics",
+      "systemPrompt": "You are a performance analytics specialist using KiloCode to analyze application performance trends, identify optimization opportunities, and track performance improvements. Focus on AI platform-specific performance metrics and user experience optimization.",
+      "tools": ["kilo-code", "traycer", "superdesign", "tailwind"],
+      "capabilities": [
+        "Performance trend analysis and forecasting",
+        "Resource utilization optimization",
+        "User experience performance metrics",
+        "API response time analytics",
+        "Frontend performance optimization",
+        "Bundle size and loading analytics",
+        "Memory usage pattern analysis",
+        "Scalability bottleneck identification"
+      ],
+      "specializations": ["Performance Analytics", "Optimization Insights", "Resource Management", "Scalability Analysis"],
+      "integrations": {
+        "kilo_code": {
+          "performance_monitoring": true,
+          "optimization_insights": true,
+          "resource_analytics": true,
+          "scalability_metrics": true
+        }
+      }
+    }
+  },
+  "analytics_workflows": {
+    "kilocode-comprehensive-analysis": {
+      "name": "KiloCode Comprehensive Platform Analysis Workflow",
+      "description": "Complete platform analytics workflow using KiloCode for deep development insights",
+      "trigger": "daily_analytics_report",
+      "agents": ["kilocode-ai-platform-analyst", "kilocode-team-productivity-analyst", "kilocode-quality-assurance-specialist", "kilocode-performance-optimizer"],
+      "steps": [
+        "AI platform code quality and architecture analysis",
+        "Team productivity and collaboration metrics collection",
+        "Quality assurance and technical debt assessment",
+        "Performance optimization and scalability analysis",
+        "Comprehensive reporting and actionable insights generation",
+        "Trend analysis and predictive recommendations"
+      ]
+    },
+    "kilocode-sprint-retrospective-analytics": {
+      "name": "KiloCode Sprint Retrospective Analytics",
+      "description": "Sprint-focused analytics workflow for continuous improvement insights",
+      "trigger": "sprint_completion",
+      "agents": ["kilocode-team-productivity-analyst", "kilocode-quality-assurance-specialist"],
+      "steps": [
+        "Sprint velocity and delivery metrics analysis",
+        "Quality gates and testing effectiveness review",
+        "Team collaboration and blockers identification",
+        "Technical debt impact assessment",
+        "Actionable improvement recommendations generation"
+      ]
+    }
+  }
+}

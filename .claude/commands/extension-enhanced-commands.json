@@ -1,0 +1,334 @@
+{
+  "extension_enhanced_commands": {
+    "/superdesign": {
+      "name": "SuperDesign Enhanced Commands",
+      "description": "Leverage SuperDesign VS Code extension for UI/UX development",
+      "commands": {
+        "/superdesign-create": {
+          "description": "Create new design component with SuperDesign integration",
+          "usage": "/superdesign-create --type=[component|page|layout] --name=[name] --style=[modern|brutalism|minimal]",
+          "integration": "superdesign",
+          "workflow": [
+            "Initialize SuperDesign extension context",
+            "Generate design wireframe and theme",
+            "Create HTML/CSS with responsive design",
+            "Save to .superdesign/design_iterations/",
+            "Open live preview in browser",
+            "Enable real-time editing with hot reload"
+          ],
+          "example": "/superdesign-create --type=component --name=hero-section --style=modern"
+        },
+        "/superdesign-theme": {
+          "description": "Generate custom design theme using SuperDesign",
+          "usage": "/superdesign-theme --name=[theme-name] --palette=[colors] --typography=[fonts]",
+          "integration": "superdesign",
+          "workflow": [
+            "Access SuperDesign theme generator",
+            "Generate CSS variables and utilities",
+            "Create Tailwind config extensions",
+            "Apply theme across component library",
+            "Generate theme documentation"
+          ],
+          "example": "/superdesign-theme --name=urnlabs-brand --palette=purple,gold --typography=jetbrains-mono"
+        },
+        "/superdesign-optimize": {
+          "description": "Optimize existing designs with SuperDesign analytics",
+          "usage": "/superdesign-optimize --target=[file-path] --focus=[performance|accessibility|responsive]",
+          "integration": "superdesign",
+          "workflow": [
+            "Analyze existing design components",
+            "Generate optimization recommendations",
+            "Apply automated improvements",
+            "Validate accessibility compliance",
+            "Generate performance metrics report"
+          ],
+          "example": "/superdesign-optimize --target=src/components/Dashboard.tsx --focus=accessibility"
+        }
+      }
+    },
+    "/coderabbit": {
+      "name": "CodeRabbit Enhanced Commands",
+      "description": "Leverage CodeRabbit VS Code extension for intelligent code review",
+      "commands": {
+        "/coderabbit-review": {
+          "description": "Perform intelligent code review with CodeRabbit",
+          "usage": "/coderabbit-review --scope=[file|directory|pull-request] --focus=[security|performance|maintainability]",
+          "integration": "coderabbit",
+          "workflow": [
+            "Initialize CodeRabbit analysis engine",
+            "Scan code for patterns and issues",
+            "Generate comprehensive review report",
+            "Provide fix suggestions and improvements",
+            "Create automated pull request if requested"
+          ],
+          "example": "/coderabbit-review --scope=src/components --focus=security"
+        },
+        "/coderabbit-optimize": {
+          "description": "Auto-optimize code with CodeRabbit intelligence",
+          "usage": "/coderabbit-optimize --target=[file-path] --type=[performance|readability|patterns]",
+          "integration": "coderabbit",
+          "workflow": [
+            "Analyze code structure and patterns",
+            "Identify optimization opportunities",
+            "Apply automated refactoring",
+            "Validate changes with testing",
+            "Generate optimization report"
+          ],
+          "example": "/coderabbit-optimize --target=src/api/routes.ts --type=performance"
+        },
+        "/coderabbit-security": {
+          "description": "Comprehensive security audit with CodeRabbit",
+          "usage": "/coderabbit-security --scan=[vulnerabilities|dependencies|configuration]",
+          "integration": "coderabbit",
+          "workflow": [
+            "Execute deep security analysis",
+            "Check for known vulnerabilities",
+            "Analyze dependency security",
+            "Validate security configurations",
+            "Generate security compliance report"
+          ],
+          "example": "/coderabbit-security --scan=vulnerabilities"
+        }
+      }
+    },
+    "/kilocode": {
+      "name": "KiloCode Enhanced Commands", 
+      "description": "Leverage KiloCode VS Code extension for analytics and quality metrics",
+      "commands": {
+        "/kilocode-analyze": {
+          "description": "Comprehensive code quality analysis with KiloCode",
+          "usage": "/kilocode-analyze --project=[project-name] --metrics=[quality|debt|productivity]",
+          "integration": "kilocode",
+          "workflow": [
+            "Initialize KiloCode analytics engine",
+            "Collect code quality metrics",
+            "Analyze technical debt patterns",
+            "Generate productivity insights",
+            "Create comprehensive analytics dashboard"
+          ],
+          "example": "/kilocode-analyze --project=visamart-fe --metrics=quality"
+        },
+        "/kilocode-dashboard": {
+          "description": "Generate real-time analytics dashboard",
+          "usage": "/kilocode-dashboard --type=[team|project|individual] --timeframe=[1d|1w|1m]",
+          "integration": "kilocode",
+          "workflow": [
+            "Access KiloCode analytics data",
+            "Generate interactive dashboard",
+            "Configure real-time metrics updates",
+            "Enable drill-down analysis",
+            "Export dashboard for sharing"
+          ],
+          "example": "/kilocode-dashboard --type=project --timeframe=1w"
+        },
+        "/kilocode-predict": {
+          "description": "Predictive analytics for project health",
+          "usage": "/kilocode-predict --focus=[delivery|quality|risk] --horizon=[sprint|quarter|year]",
+          "integration": "kilocode",
+          "workflow": [
+            "Analyze historical project data",
+            "Apply machine learning models",
+            "Generate predictive insights",
+            "Identify potential risks and opportunities",
+            "Create actionable recommendations"
+          ],
+          "example": "/kilocode-predict --focus=delivery --horizon=sprint"
+        }
+      }
+    },
+    "/traycer": {
+      "name": "Traycer Enhanced Commands",
+      "description": "Leverage Traycer VS Code extension for debugging and monitoring",
+      "commands": {
+        "/traycer-debug": {
+          "description": "Advanced debugging with Traycer integration",
+          "usage": "/traycer-debug --target=[application|api|workflow] --depth=[basic|comprehensive]",
+          "integration": "traycer",
+          "workflow": [
+            "Initialize Traycer debugging context",
+            "Enable comprehensive tracing",
+            "Capture performance metrics",
+            "Analyze execution flow",
+            "Generate debugging report with insights"
+          ],
+          "example": "/traycer-debug --target=api --depth=comprehensive"
+        },
+        "/traycer-monitor": {
+          "description": "Real-time application monitoring with Traycer",
+          "usage": "/traycer-monitor --service=[frontend|backend|database] --alerts=[enabled|disabled]",
+          "integration": "traycer",
+          "workflow": [
+            "Setup Traycer monitoring agents",
+            "Configure real-time dashboards",
+            "Enable automated alerting",
+            "Track performance metrics",
+            "Generate monitoring reports"
+          ],
+          "example": "/traycer-monitor --service=backend --alerts=enabled"
+        },
+        "/traycer-incident": {
+          "description": "Incident response and analysis with Traycer",
+          "usage": "/traycer-incident --type=[investigate|analyze|resolve] --severity=[low|medium|high|critical]",
+          "integration": "traycer",
+          "workflow": [
+            "Activate incident response mode",
+            "Gather comprehensive trace data",
+            "Perform root cause analysis",
+            "Generate resolution recommendations",
+            "Create post-incident report"
+          ],
+          "example": "/traycer-incident --type=investigate --severity=high"
+        }
+      }
+    },
+    "/multi-extension": {
+      "name": "Multi-Extension Coordination Commands",
+      "description": "Commands that coordinate multiple VS Code extensions for enhanced workflows",
+      "commands": {
+        "/workflow-complete": {
+          "description": "Complete development workflow using all extensions",
+          "usage": "/workflow-complete --type=[feature|bugfix|optimization] --scope=[frontend|backend|fullstack]",
+          "integrations": ["superdesign", "coderabbit", "kilocode", "traycer"],
+          "workflow": [
+            "SuperDesign: Design wireframe and components",
+            "CodeRabbit: Review and optimize code quality",
+            "KiloCode: Analyze metrics and technical debt",
+            "Traycer: Monitor and debug implementation",
+            "Generate comprehensive completion report"
+          ],
+          "example": "/workflow-complete --type=feature --scope=fullstack"
+        },
+        "/health-check": {
+          "description": "Comprehensive system health check using all extensions",
+          "usage": "/health-check --depth=[basic|detailed|comprehensive]",
+          "integrations": ["superdesign", "coderabbit", "kilocode", "traycer"],
+          "workflow": [
+            "SuperDesign: Validate design system consistency",
+            "CodeRabbit: Check code quality and security",
+            "KiloCode: Analyze project health metrics",
+            "Traycer: Monitor runtime performance",
+            "Generate unified health report"
+          ],
+          "example": "/health-check --depth=comprehensive"
+        },
+        "/deploy-ready": {
+          "description": "Deployment readiness assessment using all extensions",
+          "usage": "/deploy-ready --environment=[staging|production] --checks=[all|critical]",
+          "integrations": ["superdesign", "coderabbit", "kilocode", "traycer"],
+          "workflow": [
+            "SuperDesign: Validate UI/UX compliance",
+            "CodeRabbit: Security and quality gate checks",
+            "KiloCode: Technical debt and metrics validation",
+            "Traycer: Performance and monitoring readiness",
+            "Generate deployment certification report"
+          ],
+          "example": "/deploy-ready --environment=production --checks=all"
+        }
+      }
+    },
+    "/ecosystem": {
+      "name": "Cross-Repository Ecosystem Commands",
+      "description": "Commands that work across the entire repository ecosystem",
+      "commands": {
+        "/sync-ecosystem": {
+          "description": "Synchronize configurations and standards across all repositories",
+          "usage": "/sync-ecosystem --target=[configs|standards|dependencies] --repositories=[all|specific]",
+          "integrations": ["all-extensions"],
+          "workflow": [
+            "Scan all repositories for inconsistencies",
+            "Generate standardization recommendations", 
+            "Apply consistent configurations",
+            "Update extension settings across repos",
+            "Validate ecosystem coherence"
+          ],
+          "example": "/sync-ecosystem --target=configs --repositories=all"
+        },
+        "/ecosystem-metrics": {
+          "description": "Generate ecosystem-wide analytics and insights",
+          "usage": "/ecosystem-metrics --focus=[productivity|quality|performance|security]",
+          "integrations": ["kilocode", "coderabbit", "traycer"],
+          "workflow": [
+            "Collect metrics from all repositories",
+            "Aggregate cross-repository insights",
+            "Generate ecosystem health dashboard",
+            "Identify optimization opportunities",
+            "Create strategic recommendations"
+          ],
+          "example": "/ecosystem-metrics --focus=productivity"
+        },
+        "/ecosystem-deploy": {
+          "description": "Coordinate deployment across the entire ecosystem",
+          "usage": "/ecosystem-deploy --strategy=[sequential|parallel|canary] --environment=[staging|production]",
+          "integrations": ["all-extensions"],
+          "workflow": [
+            "Validate deployment readiness across all repos",
+            "Coordinate deployment sequence",
+            "Monitor deployment progress with Traycer",
+            "Validate post-deployment health",
+            "Generate ecosystem deployment report"
+          ],
+          "example": "/ecosystem-deploy --strategy=canary --environment=staging"
+        }
+      }
+    }
+  },
+  "command_configuration": {
+    "global_settings": {
+      "enable_ai_assistance": true,
+      "auto_documentation": true,
+      "progress_tracking": true,
+      "error_recovery": true,
+      "performance_monitoring": true
+    },
+    "extension_integrations": {
+      "superdesign": {
+        "auto_preview": true,
+        "theme_sync": true,
+        "component_library_integration": true
+      },
+      "coderabbit": {
+        "auto_review": true,
+        "security_scanning": true,
+        "optimization_suggestions": true
+      },
+      "kilocode": {
+        "real_time_metrics": true,
+        "dashboard_updates": true,
+        "predictive_analytics": true
+      },
+      "traycer": {
+        "continuous_monitoring": true,
+        "automated_alerting": true,
+        "incident_response": true
+      }
+    },
+    "workflow_coordination": {
+      "parallel_execution": true,
+      "dependency_resolution": true,
+      "error_propagation": false,
+      "success_validation": true
+    }
+  },
+  "usage_examples": {
+    "full_feature_development": [
+      "/superdesign-create --type=page --name=dashboard --style=modern",
+      "/coderabbit-review --scope=src/components --focus=security", 
+      "/kilocode-analyze --project=current --metrics=quality",
+      "/traycer-monitor --service=frontend --alerts=enabled",
+      "/workflow-complete --type=feature --scope=frontend"
+    ],
+    "deployment_pipeline": [
+      "/health-check --depth=comprehensive",
+      "/coderabbit-security --scan=vulnerabilities",
+      "/kilocode-predict --focus=delivery --horizon=sprint",
+      "/deploy-ready --environment=production --checks=all",
+      "/ecosystem-deploy --strategy=canary --environment=production"
+    ],
+    "troubleshooting_workflow": [
+      "/traycer-incident --type=investigate --severity=high",
+      "/coderabbit-review --scope=affected-area --focus=performance",
+      "/kilocode-analyze --project=current --metrics=debt",
+      "/traycer-debug --target=application --depth=comprehensive"
+    ]
+  }
+}

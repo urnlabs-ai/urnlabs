@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # Simple development server using Node.js
+  urnlabs-dev-server:
+    image: node:18-alpine
+    working_dir: /app
+    ports:
+      - "9001:8001"  # usmanramzan-ai
+      - "9002:8002"  # urnlabs-ai  
+      - "9003:8003"  # eprecisio-com
+    volumes:
+      - .:/app
+    command: node serve-sites.cjs
+    environment:
+      - NODE_ENV=development
+    networks:
+      - dev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Individual Astro dev servers (alternative approach)
+  usmanramzan-ai:
+    image: node:18-alpine
+    working_dir: /app/worktrees/usmanramzan-ai
+    ports:
+      - "7000:4321"
+    volumes:
+      - .:/app
+    command: sh -c "cd /app && pnpm install --force && cd /app/worktrees/usmanramzan-ai && pnpm dev --host 0.0.0.0"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - dev-network
+    restart: unless-stopped
+    profiles: ["astro"]
+
+  urnlabs-ai:
+    image: node:18-alpine
+    working_dir: /app/worktrees/urnlabs-ai
+    ports:
+      - "7001:4321"
+    volumes:
+      - .:/app
+    command: sh -c "cd /app && pnpm install --force && cd /app/worktrees/urnlabs-ai && pnpm dev --host 0.0.0.0"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - dev-network
+    restart: unless-stopped
+    profiles: ["astro"]
+
+  eprecisio-com:
+    image: node:18-alpine
+    working_dir: /app/worktrees/eprecisio-com
+    ports:
+      - "7003:4321"
+    volumes:
+      - .:/app
+    command: sh -c "cd /app && pnpm install --force && cd /app/worktrees/eprecisio-com && pnpm dev --host 0.0.0.0"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - dev-network
+    restart: unless-stopped
+    profiles: ["astro"]
+
+  # Nginx proxy for unified access (optional)
+  nginx-proxy:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./docker/nginx-dev.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - urnlabs-dev-server
+    networks:
+      - dev-network
+    restart: unless-stopped
+    profiles: ["proxy"]
+
+networks:
+  dev-network:
+    driver: bridge
+
+volumes:
+  node_modules_cache:

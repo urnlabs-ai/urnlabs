@@ -1,0 +1,46 @@
+services:
+  # Unified Node.js server serving all three websites
+  websites-server:
+    image: node:18-alpine
+    container_name: urnlabs-websites
+    working_dir: /app
+    ports:
+      - "8001:8001"  # usmanramzan.ai
+      - "8002:8002"  # urnlabs.ai
+      - "8003:8003"  # eprecisio.com
+    volumes:
+      - .:/app:ro  # Read-only mount
+    command: ["node", "serve-sites.cjs"]
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8001", "http://localhost:8002", "http://localhost:8003"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - websites-network
+
+  # Nginx proxy for unified access (optional)
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: urnlabs-proxy
+    ports:
+      - "8000:80"
+    volumes:
+      - ./docker/nginx-websites.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - websites-server
+    networks:
+      - websites-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  websites-network:
+    driver: bridge

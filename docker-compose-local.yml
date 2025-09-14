@@ -1,0 +1,546 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: urnlabs-postgres-local
+    environment:
+      POSTGRES_DB: urnlabs_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - urnlabs-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: urnlabs-redis-local
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # Main Gateway Service - Single Entry Point
+  gateway:
+    build:
+      context: .
+      dockerfile: apps/gateway/Dockerfile
+      target: dev
+    container_name: urnlabs-gateway-local
+    ports:
+      - "7000:7000"  # Main entry point for all traffic
+    environment:
+      - NODE_ENV=development
+      - GATEWAY_PORT=7000
+      - API_ENDPOINT=http://api:7001
+      - AGENTS_ENDPOINT=http://agents:7002
+      - BRIDGE_ENDPOINT=http://bridge:7003
+      - DASHBOARD_ENDPOINT=http://dashboard:7004
+      - MAESTRO_ENDPOINT=http://urn-maestro:7005
+      - MONITORING_ENDPOINT=http://monitoring:7006
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
+    depends_on:
+      - api
+      - agents
+      - bridge
+      - monitoring
+      - redis
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # API Service (Internal Network)
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: dev
+    container_name: urnlabs-api-local
+    ports:
+      - "7001:7001"
+    environment:
+      - NODE_ENV=development
+      - API_PORT=7001
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_dev
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
+      - GATEWAY_URL=http://gateway:7000
+      - AGENTS_ENDPOINT=http://agents:7002
+      - MAESTRO_ENDPOINT=http://urn-maestro:7005
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # Agent Service (Internal Network)
+  agents:
+    build:
+      context: .
+      dockerfile: apps/agents/Dockerfile
+      target: dev
+    container_name: urnlabs-agents-local
+    ports:
+      - "7002:7002"
+    environment:
+      - NODE_ENV=development
+      - AGENT_SERVICE_PORT=7002
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_dev
+      - REDIS_URL=redis://redis:6379
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - API_ENDPOINT=http://api:7001
+      - GATEWAY_URL=http://gateway:7000
+      - MAESTRO_ENDPOINT=http://urn-maestro:7005
+      - MONITORING_ENDPOINT=http://monitoring:7006
+    depends_on:
+      - postgres
+      - redis
+      - api
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # API Bridge Service (Go <-> Node.js)
+  bridge:
+    build:
+      context: .
+      dockerfile: apps/bridge/Dockerfile
+      target: dev
+    container_name: urnlabs-bridge-local
+    ports:
+      - "7003:7003"
+    environment:
+      - NODE_ENV=development
+      - BRIDGE_PORT=7003
+      - API_ENDPOINT=http://api:7001
+      - AGENTS_ENDPOINT=http://agents:7002
+      - GATEWAY_URL=http://gateway:7000
+      - MAESTRO_ENDPOINT=http://urn-maestro:7005
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - api
+      - agents
+      - urn-maestro
+      - redis
+    volumes:
+      - shared_data:/shared
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # Enhanced Dashboard Service
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+    container_name: urnlabs-dashboard-local
+    ports:
+      - "7004:7004"
+    environment:
+      - NODE_ENV=development
+      - DASHBOARD_PORT=7004
+      - VITE_GATEWAY_URL=http://localhost:7000
+      - VITE_API_URL=http://localhost:7000/api
+      - VITE_AGENTS_URL=http://localhost:7000/agents
+      - VITE_BRIDGE_URL=http://localhost:7000/bridge
+      - VITE_MAESTRO_URL=http://localhost:7000/maestro
+      - VITE_WS_URL=ws://localhost:7000/ws
+    depends_on:
+      - gateway
+    volumes:
+      - .:/app
+      - /app/node_modules
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # URN-MAESTRO Go Service
+  urn-maestro:
+    build:
+      context: ../urn-maestro-go
+      dockerfile: Dockerfile
+    container_name: urnlabs-maestro-local
+    ports:
+      - "7005:7005"  # Main HTTP server
+      - "7015:7015"  # MCP server
+    environment:
+      - URN_ENHANCED_MODE=true
+      - URN_HTTP_PORT=7005
+      - URN_MCP_PORT=7015
+      - URN_LOG_LEVEL=info
+      - URN_DATABASE_PATH=/data/urn-maestro.db
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - QWEN_API_KEY=${QWEN_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - JIRA_PAT=${JIRA_PAT}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - NODE_API_ENDPOINT=http://api:7001
+      - NODE_AGENT_ENDPOINT=http://agents:7002
+      - GATEWAY_URL=http://gateway:7000
+    volumes:
+      - maestro_data:/data
+      - shared_data:/shared
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # Monitoring & Observability Service
+  monitoring:
+    build:
+      context: .
+      dockerfile: packages/monitoring/Dockerfile
+      target: dev
+    container_name: urnlabs-monitoring-local
+    ports:
+      - "7006:7006"  # Monitoring dashboard
+      - "7016:7016"  # MCP server
+    environment:
+      - NODE_ENV=development
+      - MONITORING_PORT=7006
+      - MONITORING_MCP_PORT=7016
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_dev
+      - REDIS_URL=redis://redis:6379
+      - PROMETHEUS_URL=http://prometheus:9090
+      - GRAFANA_URL=http://grafana:3001
+      - DATADOG_API_KEY=${DATADOG_API_KEY}
+      - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
+      - GATEWAY_URL=http://gateway:7000
+    depends_on:
+      - postgres
+      - redis
+      - prometheus
+      - grafana
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+      - monitoring_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # MCP Integration Service
+  mcp-integration:
+    build:
+      context: .
+      dockerfile: packages/mcp-integration/Dockerfile
+      target: dev
+    container_name: urnlabs-mcp-local
+    ports:
+      - "7007:7007"  # MCP integration service
+    environment:
+      - NODE_ENV=development
+      - MCP_SERVICE_PORT=7007
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_dev
+      - REDIS_URL=redis://redis:6379
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_TEAM_ID=${SLACK_TEAM_ID}
+      - GATEWAY_URL=http://gateway:7000
+    depends_on:
+      - postgres
+      - redis
+      - gateway
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7007/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # Testing & Quality Assurance Service
+  testing:
+    build:
+      context: .
+      dockerfile: packages/testing/Dockerfile
+      target: dev
+    container_name: urnlabs-testing-local
+    ports:
+      - "7008:7008"  # Testing service
+    environment:
+      - NODE_ENV=test
+      - TESTING_PORT=7008
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_test
+      - REDIS_URL=redis://redis:6379
+      - GATEWAY_URL=http://gateway:7000
+      - API_URL=http://api:7001
+      - AGENTS_URL=http://agents:7002
+    depends_on:
+      - postgres
+      - redis
+      - gateway
+      - api
+      - agents
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # Security & Compliance Service
+  security:
+    build:
+      context: .
+      dockerfile: packages/security/Dockerfile
+      target: dev
+    container_name: urnlabs-security-local
+    ports:
+      - "7009:7009"  # Security service
+    environment:
+      - NODE_ENV=development
+      - SECURITY_PORT=7009
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_dev
+      - REDIS_URL=redis://redis:6379
+      - VAULT_ADDR=${VAULT_ADDR}
+      - VAULT_TOKEN=${VAULT_TOKEN}
+      - SONAR_HOST_URL=${SONAR_HOST_URL}
+      - SONAR_TOKEN=${SONAR_TOKEN}
+      - SNYK_TOKEN=${SNYK_TOKEN}
+      - GATEWAY_URL=http://gateway:7000
+    depends_on:
+      - postgres
+      - redis
+      - gateway
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7009/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # Prometheus for monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: urnlabs-prometheus-local
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: urnlabs-grafana-local
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # Web Applications - UrnLabs Website
+  urnlabs:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.astro
+      args:
+        SITE_NAME: urnlabs-ai
+    container_name: urnlabs-website-local
+    ports:
+      - "8002:4321"
+    environment:
+      - NODE_ENV=development
+      - SITE_NAME=urnlabs-ai
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./worktrees/urnlabs-ai:/app/worktrees/urnlabs-ai
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4321/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # Web Applications - UsmanRamzan Website
+  usmanramzan:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.astro
+      args:
+        SITE_NAME: usmanramzan-ai
+    container_name: usmanramzan-website-local
+    ports:
+      - "8001:4321"
+    environment:
+      - NODE_ENV=development
+      - SITE_NAME=usmanramzan-ai
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./worktrees/usmanramzan-ai:/app/worktrees/usmanramzan-ai
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4321/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # Web Applications - UsmanRamzan AI Website
+  usmanramzan-ai:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.astro
+      args:
+        SITE_NAME: usmanramzan-ai
+    container_name: usmanramzan-ai-website-local
+    ports:
+      - "8003:4321"
+    environment:
+      - NODE_ENV=development
+      - SITE_NAME=usmanramzan-ai
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./worktrees/usmanramzan-ai:/app/worktrees/usmanramzan-ai
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4321/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # Nginx Reverse Proxy for Web Applications
+  nginx-web:
+    image: nginx:alpine
+    container_name: urnlabs-nginx-web-local
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx-websites.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - urnlabs
+      - usmanramzan
+      - usmanramzan-ai
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  maestro_data:
+    driver: local
+  shared_data:
+    driver: local
+  monitoring_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  urnlabs-network:
+    driver: bridge
+    name: urnlabs-network

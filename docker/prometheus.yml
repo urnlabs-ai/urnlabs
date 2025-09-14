@@ -1,0 +1,77 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'gateway'
+    static_configs:
+      - targets: ['gateway:7000']
+    metrics_path: '/metrics'
+
+  - job_name: 'api'
+    static_configs:
+      - targets: ['api:7001']
+    metrics_path: '/metrics'
+
+  - job_name: 'agents'
+    static_configs:
+      - targets: ['agents:7002']
+    metrics_path: '/metrics'
+
+  - job_name: 'bridge'
+    static_configs:
+      - targets: ['bridge:7003']
+    metrics_path: '/metrics'
+
+  - job_name: 'dashboard'
+    static_configs:
+      - targets: ['dashboard:7004']
+    metrics_path: '/metrics'
+
+  - job_name: 'urn-maestro'
+    static_configs:
+      - targets: ['urn-maestro:7005']
+    metrics_path: '/metrics'
+
+  - job_name: 'monitoring'
+    static_configs:
+      - targets: ['monitoring:7006']
+    metrics_path: '/metrics'
+
+  - job_name: 'mcp-integration'
+    static_configs:
+      - targets: ['mcp-integration:7007']
+    metrics_path: '/metrics'
+
+  - job_name: 'testing'
+    static_configs:
+      - targets: ['testing:7008']
+    metrics_path: '/metrics'
+
+  - job_name: 'security'
+    static_configs:
+      - targets: ['security:7009']
+    metrics_path: '/metrics'
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    metrics_path: '/metrics'
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    metrics_path: '/metrics'
+
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-web:80']
+    metrics_path: '/metrics'

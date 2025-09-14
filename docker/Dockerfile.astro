@@ -1,0 +1,41 @@
+# Improved Dockerfile for Astro applications with workspace support
+FROM node:18-alpine
+
+# Install system dependencies
+RUN apk add --no-cache libc6-compat curl
+
+# Set working directory
+WORKDIR /app
+
+# Install pnpm for better workspace support
+RUN npm install -g pnpm@8
+
+# Copy package.json files first for better caching
+COPY package*.json ./
+COPY pnpm-*.yaml ./
+COPY packages/ ./packages/
+COPY worktrees/ ./worktrees/
+
+# Copy the entire workspace context
+COPY . .
+
+# Install all workspace dependencies from root with fallback approach
+RUN pnpm install --frozen-lockfile || \
+    (echo "Lockfile incompatible, falling back to fresh install" && \
+    rm -f pnpm-lock.yaml && \
+    pnpm install) || \
+    npm install
+
+# Change to the specific site directory
+ARG SITE_NAME
+WORKDIR /app/worktrees/${SITE_NAME}
+
+# Expose port
+EXPOSE 4321
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:4321/ || exit 1
+
+# Start development server
+CMD ["pnpm", "dev", "--host", "0.0.0.0", "--port", "4321"]

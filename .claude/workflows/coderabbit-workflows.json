@@ -1,0 +1,150 @@
+{
+  "workflows": {
+    "coderabbit-ai-platform-review": {
+      "name": "CodeRabbit AI Platform Development Workflow",
+      "description": "Comprehensive AI platform development workflow with CodeRabbit automated review and optimization",
+      "trigger": "pull_request",
+      "steps": [
+        {
+          "name": "code_analysis",
+          "agent": "coderabbit-analyzer",
+          "action": "analyze_changes",
+          "tools": ["code-rabbit", "typescript", "eslint"],
+          "parameters": {
+            "analysis_depth": "comprehensive",
+            "focus_areas": ["ai_integration", "performance", "security", "type_safety"],
+            "language": "typescript",
+            "frameworks": ["astro", "react", "nodejs"]
+          }
+        },
+        {
+          "name": "ai_integration_review",
+          "agent": "coderabbit-ai-specialist", 
+          "action": "review_ai_integration",
+          "tools": ["code-rabbit", "kilo-code", "sequential-thinking"],
+          "parameters": {
+            "ai_patterns": ["agent_orchestration", "context_management", "prompt_engineering"],
+            "integration_points": ["claude_api", "mcp_servers", "ai_workflows"],
+            "performance_targets": ["response_time_200ms", "token_optimization"]
+          }
+        },
+        {
+          "name": "architecture_validation",
+          "agent": "coderabbit-architect",
+          "action": "validate_architecture",
+          "tools": ["code-rabbit", "memory-bank", "knowledge-graph"],
+          "parameters": {
+            "architecture_patterns": ["microservices", "event_driven", "clean_architecture"],
+            "scalability_checks": ["horizontal_scaling", "load_handling", "resource_optimization"],
+            "maintainability_score": "minimum_8_out_of_10"
+          }
+        },
+        {
+          "name": "automated_optimization",
+          "agent": "coderabbit-optimizer",
+          "action": "suggest_optimizations", 
+          "tools": ["code-rabbit", "prettier", "traycer"],
+          "parameters": {
+            "optimization_types": ["performance", "bundle_size", "memory_usage", "code_quality"],
+            "auto_apply": ["formatting", "import_organization", "simple_refactoring"],
+            "manual_review": ["complex_refactoring", "architecture_changes"]
+          }
+        },
+        {
+          "name": "quality_assurance",
+          "agent": "coderabbit-qa",
+          "action": "comprehensive_qa",
+          "tools": ["code-rabbit", "github", "slack"],
+          "parameters": {
+            "quality_checks": ["test_coverage", "documentation", "error_handling", "accessibility"],
+            "coverage_threshold": "85_percent",
+            "notification_channels": ["github_pr_comments", "slack_dev_channel"]
+          }
+        }
+      ],
+      "success_criteria": [
+        "code_quality_score >= 8.5",
+        "security_issues == 0",
+        "performance_regression == false",
+        "test_coverage >= 85%"
+      ],
+      "failure_actions": [
+        "block_merge",
+        "create_detailed_report",
+        "schedule_review_session"
+      ]
+    },
+    "coderabbit-production-deployment": {
+      "name": "CodeRabbit Production Deployment Workflow",
+      "description": "Production-ready deployment workflow with CodeRabbit validation and monitoring",
+      "trigger": "main_branch_push",
+      "steps": [
+        {
+          "name": "pre_deployment_validation",
+          "agent": "coderabbit-validator",
+          "action": "validate_production_readiness",
+          "tools": ["code-rabbit", "database", "monitoring"],
+          "parameters": {
+            "validation_checks": ["build_success", "test_passing", "security_scan", "performance_benchmark"],
+            "database_migrations": "validate_and_plan",
+            "rollback_plan": "required"
+          }
+        },
+        {
+          "name": "deployment_execution",
+          "agent": "coderabbit-deployer",
+          "action": "execute_deployment",
+          "tools": ["code-rabbit", "docker", "kubernetes"],
+          "parameters": {
+            "deployment_strategy": "blue_green",
+            "health_checks": "comprehensive",
+            "monitoring_alerts": "enabled"
+          }
+        },
+        {
+          "name": "post_deployment_monitoring",
+          "agent": "coderabbit-monitor",
+          "action": "monitor_deployment",
+          "tools": ["code-rabbit", "traycer", "kilo-code"],
+          "parameters": {
+            "monitoring_duration": "24_hours",
+            "alert_thresholds": ["error_rate_increase", "performance_degradation", "user_issues"],
+            "auto_rollback": "on_critical_issues"
+          }
+        }
+      ]
+    }
+  },
+  "agents": {
+    "coderabbit-analyzer": {
+      "name": "CodeRabbit Code Analyzer",
+      "description": "Advanced code analysis agent using CodeRabbit AI for comprehensive code review",
+      "tools": ["code-rabbit", "typescript", "eslint", "prettier"],
+      "specializations": ["code_analysis", "pattern_detection", "best_practices", "vulnerability_scanning"]
+    },
+    "coderabbit-ai-specialist": {
+      "name": "CodeRabbit AI Integration Specialist", 
+      "description": "AI integration and optimization specialist using CodeRabbit for AI-powered applications",
+      "tools": ["code-rabbit", "sequential-thinking", "memory-bank", "kilo-code"],
+      "specializations": ["ai_integration", "prompt_optimization", "context_management", "performance_tuning"]
+    },
+    "coderabbit-architect": {
+      "name": "CodeRabbit Software Architect",
+      "description": "Software architecture validation and optimization agent using CodeRabbit insights",
+      "tools": ["code-rabbit", "knowledge-graph", "github", "traycer"],
+      "specializations": ["architecture_patterns", "scalability_design", "maintainability", "system_integration"]
+    },
+    "coderabbit-optimizer": {
+      "name": "CodeRabbit Performance Optimizer",
+      "description": "Code optimization and performance enhancement agent using CodeRabbit analysis",
+      "tools": ["code-rabbit", "traycer", "prettier", "tailwind"],
+      "specializations": ["performance_optimization", "bundle_optimization", "memory_management", "code_refactoring"]
+    },
+    "coderabbit-qa": {
+      "name": "CodeRabbit Quality Assurance Specialist",
+      "description": "Quality assurance and testing validation agent using CodeRabbit quality metrics",
+      "tools": ["code-rabbit", "github", "slack", "storybook"],
+      "specializations": ["quality_metrics", "test_validation", "documentation_quality", "accessibility_compliance"]
+    }
+  }
+}

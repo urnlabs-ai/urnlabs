@@ -1,0 +1,144 @@
+{
+  "monitoring_workflows": {
+    "traycer-ai-platform-monitoring": {
+      "name": "Traycer AI Platform Monitoring Workflow",
+      "description": "Comprehensive AI platform monitoring and debugging workflow using Traycer for urnlabs",
+      "trigger": "continuous_monitoring",
+      "steps": [
+        {
+          "name": "ai_service_tracing",
+          "agent": "traycer-ai-service-monitor",
+          "action": "monitor_ai_service_performance",
+          "tools": ["traycer", "sequential-thinking", "memory-bank", "kilo-code"],
+          "parameters": {
+            "trace_types": ["llm_api_calls", "agent_orchestration", "context_processing", "response_generation"],
+            "performance_metrics": ["response_latency", "token_processing_time", "memory_usage", "cpu_utilization"],
+            "error_tracking": ["api_failures", "timeout_errors", "context_overflow", "token_limit_exceeded"],
+            "alerting_thresholds": {
+              "response_time": "2000ms",
+              "error_rate": "5%",
+              "memory_usage": "80%"
+            }
+          }
+        },
+        {
+          "name": "user_interaction_tracing",
+          "agent": "traycer-user-experience-monitor",
+          "action": "trace_user_interactions",
+          "tools": ["traycer", "superdesign", "github", "tailwind"],
+          "parameters": {
+            "interaction_types": ["page_loads", "api_requests", "ui_interactions", "form_submissions"],
+            "user_journey_tracking": ["conversion_funnels", "drop_off_points", "engagement_patterns"],
+            "performance_monitoring": ["core_web_vitals", "javascript_errors", "network_requests"],
+            "real_user_monitoring": true
+          }
+        },
+        {
+          "name": "system_health_monitoring",
+          "agent": "traycer-system-health-monitor",
+          "action": "monitor_system_health",
+          "tools": ["traycer", "database", "monitoring", "slack"],
+          "parameters": {
+            "health_checks": ["database_connectivity", "api_endpoints", "external_services", "background_jobs"],
+            "resource_monitoring": ["memory_usage", "cpu_load", "disk_space", "network_bandwidth"],
+            "dependency_tracking": ["third_party_apis", "database_queries", "external_integrations"],
+            "incident_management": ["automated_alerting", "escalation_procedures", "recovery_protocols"]
+          }
+        }
+      ],
+      "success_criteria": [
+        "system_availability >= 99.9%",
+        "average_response_time <= 200ms",
+        "error_rate <= 1%",
+        "user_satisfaction_score >= 8.5"
+      ]
+    },
+    "traycer-debugging-workflow": {
+      "name": "Traycer Advanced Debugging Workflow",
+      "description": "Advanced debugging and troubleshooting workflow using Traycer for issue resolution",
+      "trigger": "error_detected_or_manual_debug",
+      "steps": [
+        {
+          "name": "error_root_cause_analysis",
+          "agent": "traycer-debug-specialist",
+          "action": "analyze_error_root_cause",
+          "tools": ["traycer", "github", "eslint", "prettier"],
+          "parameters": {
+            "analysis_depth": "comprehensive",
+            "trace_correlation": ["request_id", "user_session", "timestamp", "stack_trace"],
+            "error_patterns": ["recurring_errors", "error_clustering", "performance_degradation"],
+            "code_analysis": ["static_analysis", "dynamic_analysis", "dependency_tracking"]
+          }
+        },
+        {
+          "name": "performance_bottleneck_identification",
+          "agent": "traycer-performance-debugger",
+          "action": "identify_performance_bottlenecks",
+          "tools": ["traycer", "kilo-code", "typescript", "memory-bank"],
+          "parameters": {
+            "performance_analysis": ["cpu_profiling", "memory_profiling", "io_analysis", "network_latency"],
+            "bottleneck_detection": ["slow_queries", "heavy_computations", "memory_leaks", "blocking_operations"],
+            "optimization_suggestions": ["code_optimization", "caching_strategies", "resource_allocation"]
+          }
+        }
+      ]
+    }
+  },
+  "monitoring_agents": {
+    "traycer-ai-service-monitor": {
+      "name": "Traycer AI Service Monitor",
+      "description": "AI service monitoring and performance tracking specialist using Traycer",
+      "tools": ["traycer", "sequential-thinking", "memory-bank", "kilo-code"],
+      "specializations": ["AI Service Monitoring", "LLM Performance", "Agent Orchestration", "Context Management"],
+      "monitoring_scope": {
+        "ai_services": ["llm_apis", "agent_coordination", "context_processing"],
+        "performance_metrics": ["latency", "throughput", "resource_usage"],
+        "error_tracking": ["api_failures", "timeout_errors", "context_overflow"]
+      }
+    },
+    "traycer-user-experience-monitor": {
+      "name": "Traycer User Experience Monitor",
+      "description": "User experience monitoring and real user monitoring specialist using Traycer",
+      "tools": ["traycer", "superdesign", "github", "tailwind"],
+      "specializations": ["Real User Monitoring", "User Journey Tracking", "Frontend Performance", "UX Analytics"],
+      "monitoring_scope": {
+        "user_interactions": ["page_navigation", "form_interactions", "api_calls"],
+        "performance_tracking": ["core_web_vitals", "loading_times", "interaction_delays"],
+        "error_monitoring": ["javascript_errors", "network_failures", "ui_glitches"]
+      }
+    },
+    "traycer-system-health-monitor": {
+      "name": "Traycer System Health Monitor",
+      "description": "System health and infrastructure monitoring specialist using Traycer",
+      "tools": ["traycer", "database", "monitoring", "slack"],
+      "specializations": ["System Health", "Infrastructure Monitoring", "Dependency Tracking", "Incident Management"],
+      "monitoring_scope": {
+        "system_components": ["databases", "apis", "background_services"],
+        "infrastructure": ["servers", "containers", "network", "storage"],
+        "dependencies": ["external_apis", "third_party_services", "integrations"]
+      }
+    },
+    "traycer-debug-specialist": {
+      "name": "Traycer Debug Specialist",
+      "description": "Advanced debugging and error analysis specialist using Traycer",
+      "tools": ["traycer", "github", "eslint", "prettier"],
+      "specializations": ["Error Analysis", "Root Cause Investigation", "Code Debugging", "Issue Resolution"],
+      "debugging_capabilities": {
+        "error_analysis": ["stack_trace_analysis", "error_correlation", "pattern_detection"],
+        "code_investigation": ["static_analysis", "dynamic_tracing", "dependency_mapping"],
+        "resolution_support": ["fix_suggestions", "testing_guidance", "deployment_validation"]
+      }
+    },
+    "traycer-performance-debugger": {
+      "name": "Traycer Performance Debugger",
+      "description": "Performance debugging and optimization specialist using Traycer",
+      "tools": ["traycer", "kilo-code", "typescript", "memory-bank"],
+      "specializations": ["Performance Debugging", "Bottleneck Analysis", "Resource Optimization", "Scalability Testing"],
+      "performance_capabilities": {
+        "profiling": ["cpu_profiling", "memory_profiling", "io_analysis"],
+        "optimization": ["code_optimization", "resource_tuning", "caching_strategies"],
+        "testing": ["load_testing", "stress_testing", "performance_regression"]
+      }
+    }
+  }
+}
