@@ -16,6 +16,8 @@ RUN pnpm install --frozen-lockfile
 # Development stage
 FROM base AS dev
 WORKDIR /app/apps/api
+# Make sure the dev script can find tsx from the root node_modules
+ENV PATH=/app/node_modules/.bin:$PATH
 CMD ["pnpm", "dev"]
 
 # Build stage
