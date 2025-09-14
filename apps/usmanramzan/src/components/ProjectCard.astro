@@ -1,0 +1,400 @@
+---
+/**
+ * Project Card Component
+ * Showcase component for portfolio projects with images and case study links
+ */
+
+export interface Props {
+  title: string;
+  description: string;
+  imageUrl: string;
+  imageAlt: string;
+  caseStudyUrl?: string;
+  technologies?: string[];
+  category?: string;
+  index?: number;
+  className?: string;
+}
+
+const { 
+  title, 
+  description, 
+  imageUrl, 
+  imageAlt,
+  caseStudyUrl = '#',
+  technologies = [],
+  category,
+  index = 0,
+  className = '' 
+} = Astro.props;
+
+// Generate animation delay for staggered entrance
+const animationDelay = `${index * 150}ms`;
+---
+
+<article 
+  class={`project-card cto-glass-card overflow-hidden transition-all duration-400 hover:transform hover:-translate-y-2 hover:shadow-xl opacity-0 ${className}`}
+  style={`animation-delay: ${animationDelay}`}
+  data-animate="scale-in"
+>
+  <!-- Image Container -->
+  <div class="relative overflow-hidden group">
+    <img 
+      src={imageUrl} 
+      alt={imageAlt}
+      class="project-image w-full h-64 object-cover transition-transform duration-400 group-hover:scale-105"
+      loading="lazy"
+      decoding="async"
+    />
+    
+    <!-- Image Overlay -->
+    <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+    
+    <!-- Category Badge -->
+    {category && (
+      <div class="absolute top-4 left-4 px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-cto-text-primary">
+        {category}
+      </div>
+    )}
+  </div>
+
+  <!-- Content Container -->
+  <div class="p-6 space-y-4">
+    <!-- Title -->
+    <h3 class="cto-heading-card text-xl font-semibold text-cto-text-primary group-hover:text-cto-text-secondary transition-colors duration-300">
+      {title}
+    </h3>
+
+    <!-- Description -->
+    <p class="cto-body-secondary text-cto-text-secondary leading-relaxed">
+      {description}
+    </p>
+
+    <!-- Technologies -->
+    {technologies.length > 0 && (
+      <div class="flex flex-wrap gap-2">
+        {technologies.slice(0, 3).map((tech) => (
+          <span class="px-2 py-1 bg-cto-accent-bg text-cto-text-secondary text-xs rounded-full font-medium">
+            {tech}
+          </span>
+        ))}
+        {technologies.length > 3 && (
+          <span class="px-2 py-1 bg-cto-accent-bg text-cto-text-secondary text-xs rounded-full font-medium">
+            +{technologies.length - 3}
+          </span>
+        )}
+      </div>
+    )}
+
+    <!-- Case Study Link -->
+    <div class="pt-2">
+      <a 
+        href={caseStudyUrl}
+        class="cto-btn-link inline-flex items-center gap-2 text-cto-text-primary font-medium hover:gap-3 transition-all duration-300 group/link"
+        aria-label={`View case study for ${title}`}
+      >
+        <span>View Case Study</span>
+        <i data-lucide="arrow-right" class="w-4 h-4 transition-transform duration-300 group-hover/link:translate-x-1"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- Glassmorphism Overlay -->
+  <div class="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-white/5 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-lg"></div>
+</article>
+
+<style>
+  .project-card {
+    position: relative;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    box-shadow: 
+      0 4px 12px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+  }
+
+  .project-card:hover {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(15px);
+    box-shadow: 
+      0 15px 35px rgba(0, 0, 0, 0.1),
+      0 5px 15px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  /* Animation classes */
+  .project-card[data-animate="scale-in"] {
+    animation: projectScaleIn 0.6s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+  }
+
+  @keyframes projectScaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9) translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  /* Enhanced image effects */
+  .project-image {
+    transition: transform 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  .project-card:hover .project-image {
+    transform: scale(1.05);
+  }
+
+  /* Image loading states */
+  .project-image {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  .project-image[src] {
+    animation: none;
+    background: none;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* Enhanced hover effects */
+  .project-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%, rgba(255, 255, 255, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 1;
+    pointer-events: none;
+    border-radius: 20px;
+  }
+
+  .project-card:hover::before {
+    opacity: 1;
+  }
+
+  /* Technology tags styling */
+  .project-card .bg-cto-accent-bg {
+    background: rgba(26, 26, 26, 0.05);
+    transition: all 0.2s ease;
+  }
+
+  .project-card:hover .bg-cto-accent-bg {
+    background: rgba(26, 26, 26, 0.08);
+  }
+
+  /* Dark mode support */
+  @media (prefers-color-scheme: dark) {
+    .project-card {
+      background: rgba(26, 26, 26, 0.9);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .project-card:hover {
+      background: rgba(26, 26, 26, 0.95);
+      box-shadow: 
+        0 15px 35px rgba(0, 0, 0, 0.4),
+        0 5px 15px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .project-image {
+      background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+    }
+
+    .bg-cto-accent-bg {
+      background: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .project-card:hover .bg-cto-accent-bg {
+      background: rgba(255, 255, 255, 0.15) !important;
+    }
+  }
+
+  /* High contrast mode */
+  @media (prefers-contrast: high) {
+    .project-card {
+      border-width: 2px;
+      border-color: rgba(0, 0, 0, 0.3);
+    }
+
+    .project-card:hover {
+      border-color: rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .project-card {
+      transition: none;
+      animation: none !important;
+    }
+
+    .project-card[data-animate="scale-in"] {
+      opacity: 1;
+      transform: none;
+    }
+
+    .project-image,
+    .cto-btn-link,
+    .bg-cto-accent-bg {
+      transition: none;
+    }
+
+    .project-card:hover {
+      transform: none;
+    }
+
+    .project-card:hover .project-image {
+      transform: none;
+    }
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    .project-card {
+      margin-bottom: 2rem;
+    }
+
+    .project-card:hover {
+      transform: none;
+      box-shadow: 
+        0 8px 20px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .project-image {
+      height: 200px;
+    }
+
+    .project-card:hover .project-image {
+      transform: scale(1.02);
+    }
+  }
+</style>
+
+<script>
+  /**
+   * Project Card Intersection Observer and Image Loading
+   */
+  class ProjectCardController {
+    constructor() {
+      this.cards = document.querySelectorAll('.project-card[data-animate]');
+      this.images = document.querySelectorAll('.project-image');
+      this.init();
+    }
+
+    init() {
+      this.setupIntersectionObserver();
+      this.setupImageLoading();
+      this.setupAccessibility();
+    }
+
+    setupIntersectionObserver() {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              requestAnimationFrame(() => {
+                entry.target.style.animationPlayState = 'running';
+              });
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        {
+          threshold: 0.1,
+          rootMargin: '0px 0px -100px 0px'
+        }
+      );
+
+      this.cards.forEach((card) => {
+        card.style.animationPlayState = 'paused';
+        observer.observe(card);
+      });
+    }
+
+    setupImageLoading() {
+      this.images.forEach((img) => {
+        // Add loading placeholder
+        img.style.backgroundColor = '#f0f0f0';
+        
+        // Handle successful load
+        img.addEventListener('load', () => {
+          img.style.backgroundColor = 'transparent';
+          img.classList.add('loaded');
+        });
+
+        // Handle load error
+        img.addEventListener('error', () => {
+          img.style.backgroundColor = '#ffebee';
+          img.setAttribute('alt', 'Project image unavailable');
+        });
+      });
+    }
+
+    setupAccessibility() {
+      // Enhance keyboard navigation
+      this.cards.forEach((card) => {
+        const link = card.querySelector('a[href]');
+        if (link) {
+          // Make entire card focusable
+          card.setAttribute('tabindex', '0');
+          
+          // Handle enter key on card
+          card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              link.click();
+            }
+          });
+
+          // Visual focus indicators
+          card.addEventListener('focus', () => {
+            card.style.outline = '2px solid rgba(26, 26, 26, 0.3)';
+            card.style.outlineOffset = '2px';
+          });
+
+          card.addEventListener('blur', () => {
+            card.style.outline = 'none';
+          });
+        }
+      });
+    }
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      new ProjectCardController();
+    });
+  } else {
+    new ProjectCardController();
+  }
+
+  // Reinitialize for dynamic content
+  document.addEventListener('astro:page-load', () => {
+    new ProjectCardController();
+  });
+</script>

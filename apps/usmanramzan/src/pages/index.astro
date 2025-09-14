@@ -1,217 +1,363 @@
 ---
+/**
+ * Modern CTO Portfolio Homepage
+ * Complete redesign with glassmorphism aesthetics and professional layout
+ * Integrates all custom components and enhanced theme system
+ */
+
 import BaseLayout from '~/layouts/BaseLayout.astro';
+import Navigation from '~/components/Navigation.astro';
+import ExpertiseCard from '~/components/ExpertiseCard.astro';
+import ProjectCard from '~/components/ProjectCard.astro';
+import ContactForm from '~/components/ContactForm.astro';
+
+// Portfolio data - Production ready content
+const expertiseAreas = [
+  {
+    icon: 'brain',
+    title: 'AI Architecture',
+    description: 'Designing scalable AI systems with autonomous agents, decision-making frameworks, and governance-first approaches for enterprise deployment.'
+  },
+  {
+    icon: 'git-branch',
+    title: 'ML Engineering',
+    description: 'Building production-ready machine learning pipelines with MLOps best practices, automated deployment, and comprehensive monitoring.'
+  },
+  {
+    icon: 'network',
+    title: 'Agent Systems',
+    description: 'Developing collaborative AI agents with emergent behavior patterns, multi-agent orchestration, and deterministic workflow execution.'
+  }
+];
+
+const featuredProjects = [
+  {
+    title: 'Autonomous Trading Platform',
+    description: 'Multi-agent system for automated market analysis and trading execution with real-time risk management and compliance monitoring.',
+    imageUrl: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=600&h=400&fit=crop',
+    imageAlt: 'AI Trading Platform Dashboard',
+    caseStudyUrl: '/projects/trading-platform',
+    technologies: ['Python', 'TensorFlow', 'Kubernetes', 'PostgreSQL', 'Redis'],
+    category: 'AI/ML'
+  },
+  {
+    title: 'Enterprise MLOps Platform',
+    description: 'Scalable machine learning operations platform with automated deployment pipelines, model versioning, and comprehensive observability.',
+    imageUrl: 'https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?w=600&h=400&fit=crop',
+    imageAlt: 'MLOps Platform Architecture',
+    caseStudyUrl: '/projects/mlops-platform',
+    technologies: ['Kubernetes', 'Kubeflow', 'Docker', 'Prometheus', 'Grafana'],
+    category: 'DevOps'
+  }
+];
+
+const latestInsights = [
+  {
+    date: 'March 15, 2024',
+    title: 'The Evolution of AI Agents',
+    excerpt: 'Exploring how self-improving AI systems are reshaping enterprise automation and the governance challenges they present.',
+    url: '/insights/ai-agents-evolution',
+    category: 'AI'
+  },
+  {
+    date: 'March 10, 2024',
+    title: 'Scaling ML Infrastructure',
+    excerpt: 'Best practices for building robust, scalable machine learning infrastructure that grows with your organization.',
+    url: '/insights/scaling-ml-infrastructure',
+    category: 'MLOps'
+  },
+  {
+    date: 'March 5, 2024',
+    title: 'Agent Collaboration Patterns',
+    excerpt: 'Design patterns and architectural approaches for implementing effective multi-agent systems in production.',
+    url: '/insights/agent-collaboration-patterns',
+    category: 'Architecture'
+  }
+];
 ---
 
 <BaseLayout
-  title="Usman Ramzan - DevOps Engineer & CTO"
-  description="Senior DevOps Engineer and CTO at Urnlabs. Kubernetes expert, cloud architect, and agentic workflow pioneer."
+  title="Muhammad Usman Ramzan - AI & ML Engineering CTO"
+  description="Senior AI/ML Engineering CTO and DevOps specialist. Building production-ready AI agent platforms, ML infrastructure, and governance-first automation systems."
 >
-  <main class="min-h-screen">
-    <!-- Hero Section -->
-    <section class="relative overflow-hidden bg-personal-hero">
-      <div class="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent"></div>
-      <div class="relative mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:px-8">
-        <div class="mx-auto max-w-4xl">
-          <div class="flex flex-col lg:flex-row items-center gap-12">
-            <div class="flex-1">
-              <h1 class="text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
-                Muhammad
-                <span class="block text-white/90">Usman Ramzan</span>
-              </h1>
-              <p class="mt-6 text-lg leading-8 text-white/80 sm:text-xl">
-                Senior DevOps Engineer & CTO at Urnlabs. 
-                Building cloud-native infrastructure and AI agent workflows.
-              </p>
-              <div class="mt-10 flex items-center gap-x-6">
-                <a
-                  href="/contact"
-                  class="rounded-md bg-white px-8 py-3 text-sm font-semibold text-black shadow-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-colors"
-                >
-                  Get in Touch
-                </a>
-                <a
-                  href="/projects"
-                  class="text-sm font-semibold leading-6 text-white hover:text-gray-200 transition-colors"
-                >
-                  View Projects <span aria-hidden="true">→</span>
-                </a>
+  <!-- Enhanced CSS Integration -->
+  <link rel="stylesheet" href="/cto_theme.css">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Fixed Navigation -->
+  <Navigation currentPath="/" />
+
+  <main class="min-h-screen overflow-hidden">
+    <!-- Hero Section with Glassmorphism and Geometric Patterns -->
+    <section id="hero" class="relative min-h-screen flex items-center pt-20 bg-gradient-to-br from-gray-50 to-gray-100">
+      <!-- Background Patterns -->
+      <div class="absolute inset-0">
+        <div class="absolute inset-0" style="background-image: radial-gradient(#e5e5e5 1px, transparent 1px); background-size: 30px 30px; opacity: 0.3;"></div>
+        <div class="absolute top-10 left-1/4 w-72 h-72 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 opacity-20 animate-pulse"></div>
+        <div class="absolute bottom-20 right-1/3 w-60 h-60 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 opacity-15 animate-pulse" style="animation-delay: 1s;"></div>
+        <div class="absolute top-1/2 right-1/4 w-80 h-80 rounded-full bg-gradient-to-br from-gray-50 to-gray-150 opacity-10 animate-pulse" style="animation-delay: 2s;"></div>
+      </div>
+
+      <div class="relative z-10 max-w-7xl mx-auto px-6 py-16 lg:py-24">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <!-- Hero Content -->
+          <div class="space-y-8">
+            <h1 class="text-4xl md:text-5xl lg:text-6xl font-light leading-tight mb-6" style="background: linear-gradient(135deg, #1a1a1a 0%, #666666 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+              Shaping the Future of AI Automation
+            </h1>
+            
+            <p class="text-xl text-gray-600 max-w-2xl leading-relaxed mb-8">
+              Architecting intelligent systems that transform business operations through advanced AI agents, ML workflows, and governance-first infrastructure.
+            </p>
+
+            <!-- CTA Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4 pt-4 cto-animate-fade-up cto-animate-delay-200">
+              <a href="#contact" class="inline-flex items-center justify-center px-8 py-3 bg-gray-900 text-white font-medium rounded-full hover:bg-gray-800 transition-all duration-300 hover:-translate-y-1">
+                Start a Conversation
+                <i data-lucide="arrow-right" class="ml-2 w-4 h-4"></i>
+              </a>
+              <a href="#projects" class="inline-flex items-center text-gray-900 font-medium hover:text-gray-600 transition-colors duration-300">
+                View Projects
+                <i data-lucide="arrow-right" class="ml-2 w-4 h-4"></i>
+              </a>
+            </div>
+          </div>
+
+          <!-- Hero Visual -->
+          <div class="relative lg:justify-self-end">
+            <div class="relative w-full max-w-md mx-auto">
+              <!-- Geometric Visual Container -->
+              <div class="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-3xl overflow-hidden relative">
+                <div class="absolute inset-0 opacity-20" style="background-image: linear-gradient(rgba(229, 229, 229, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(229, 229, 229, 0.3) 1px, transparent 1px); background-size: 20px 20px;"></div>
+                <div class="absolute inset-4 bg-gradient-to-br from-transparent via-white/10 to-white/5 rounded-2xl backdrop-blur-sm"></div>
+                
+                <!-- Tech Icons Floating -->
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <div class="grid grid-cols-3 gap-6 p-8">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white cto-animate-float-gentle">
+                      <i data-lucide="cpu" class="w-6 h-6"></i>
+                    </div>
+                    <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-600 rounded-xl flex items-center justify-center text-white cto-animate-float-gentle" style="animation-delay: 0.5s;">
+                      <i data-lucide="database" class="w-6 h-6"></i>
+                    </div>
+                    <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center text-white cto-animate-float-gentle" style="animation-delay: 1s;">
+                      <i data-lucide="cloud" class="w-6 h-6"></i>
+                    </div>
+                    <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center text-white cto-animate-float-gentle" style="animation-delay: 1.5s;">
+                      <i data-lucide="activity" class="w-6 h-6"></i>
+                    </div>
+                    <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center text-white cto-animate-float-gentle" style="animation-delay: 2s;">
+                      <i data-lucide="zap" class="w-6 h-6"></i>
+                    </div>
+                    <div class="w-12 h-12 bg-gradient-to-br from-teal-500 to-green-600 rounded-xl flex items-center justify-center text-white cto-animate-float-gentle" style="animation-delay: 2.5s;">
+                      <i data-lucide="shield" class="w-6 h-6"></i>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="flex-shrink-0">
-              <img
-                class="h-64 w-64 rounded-full object-cover ring-4 ring-white/20"
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face"
-                alt="Muhammad Usman Ramzan"
-              />
-            </div>
           </div>
         </div>
       </div>
+
+      <!-- Scroll Indicator -->
+      <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-gray-600 animate-bounce">
+        <i data-lucide="chevron-down" class="w-6 h-6"></i>
+      </div>
     </section>
 
-    <!-- Current Focus Section -->
-    <section class="py-24 sm:py-32">
-      <div class="mx-auto max-w-7xl px-6 lg:px-8">
-        <div class="mx-auto max-w-2xl lg:text-center">
-          <h2 class="text-base font-semibold leading-7 text-accent-blue">Current Focus</h2>
-          <p class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-            What I'm working on
-          </p>
-          <p class="mt-6 text-lg leading-8 text-gray-300">
-            Currently leading technical initiatives at Urnlabs while consulting on cloud infrastructure and DevOps transformations.
-          </p>
-        </div>
-        <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-4xl">
-          <dl class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-10 lg:max-w-none lg:grid-cols-2 lg:gap-y-16">
-            <div class="relative pl-16">
-              <dt class="text-base font-semibold leading-7">
-                <div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-accent-blue">
-                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3V6a3 3 0 013-3h13.5a3 3 0 013 3v5.25a3 3 0 01-3 3m-16.5 0a3 3 0 003 3h13.5a3 3 0 003-3m-16.5 0h16.5" />
-                  </svg>
-                </div>
-                CTO at Urnlabs
-              </dt>
-              <dd class="mt-2 text-base leading-7 text-gray-300">
-                Leading technical strategy for AI agent platforms. Building governance-first infrastructure for enterprise automation.
-              </dd>
-            </div>
-            <div class="relative pl-16">
-              <dt class="text-base font-semibold leading-7">
-                <div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-signal-green">
-                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
-                  </svg>
-                </div>
-                Cloud Architecture
-              </dt>
-              <dd class="mt-2 text-base leading-7 text-gray-300">
-                Designing multi-cloud Kubernetes platforms on EKS, OKE, and RKE2. Focus on security, scalability, and cost optimization.
-              </dd>
-            </div>
-            <div class="relative pl-16">
-              <dt class="text-base font-semibold leading-7">
-                <div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-purple-600">
-                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.611L5 14.5" />
-                  </svg>
-                </div>
-                Agentic Workflows
-              </dt>
-              <dd class="mt-2 text-base leading-7 text-gray-300">
-                Pioneering deterministic AI agent workflows with DAG orchestration and real-time governance controls.
-              </dd>
-            </div>
-            <div class="relative pl-16">
-              <dt class="text-base font-semibold leading-7">
-                <div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-orange-600">
-                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                  </svg>
-                </div>
-                Security & Compliance
-              </dt>
-              <dd class="mt-2 text-base leading-7 text-gray-300">
-                Implementing zero-trust architectures with policy-as-code governance. SOC2 and enterprise compliance expertise.
-              </dd>
-            </div>
-          </dl>
+    <!-- Expertise Section -->
+    <section id="expertise" class="py-20 bg-cto-secondary-bg">
+      <div class="max-w-7xl mx-auto px-6">
+        <h2 class="text-3xl font-light text-center mb-16 text-gray-900">
+          Areas of Expertise
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {expertiseAreas.map((area, index) => (
+            <ExpertiseCard
+              icon={area.icon}
+              title={area.title}
+              description={area.description}
+              index={index}
+            />
+          ))}
         </div>
       </div>
     </section>
 
-    <!-- Featured Content Section -->
-    <section class="bg-gray-900 py-24 sm:py-32">
-      <div class="mx-auto max-w-7xl px-6 lg:px-8">
-        <div class="mx-auto max-w-2xl lg:mx-0">
-          <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Latest Writing & Projects</h2>
-          <p class="mt-2 text-lg leading-8 text-gray-300">
-            Thoughts on DevOps, cloud architecture, and AI automation.
-          </p>
+    <!-- Featured Projects Section -->
+    <section id="projects" class="py-20 bg-cto-accent-bg">
+      <div class="max-w-7xl mx-auto px-6">
+        <h2 class="text-3xl font-light text-center mb-16 text-gray-900">
+          Featured Work
+        </h2>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
+          {featuredProjects.map((project, index) => (
+            <ProjectCard
+              title={project.title}
+              description={project.description}
+              imageUrl={project.imageUrl}
+              imageAlt={project.imageAlt}
+              caseStudyUrl={project.caseStudyUrl}
+              technologies={project.technologies}
+              category={project.category}
+              index={index}
+            />
+          ))}
         </div>
-        <div class="mx-auto mt-10 grid max-w-2xl grid-cols-1 gap-x-8 gap-y-16 border-t border-gray-800 pt-10 sm:mt-16 sm:pt-16 lg:mx-0 lg:max-w-none lg:grid-cols-3">
-          <!-- Placeholder for featured posts/projects -->
-          <article class="flex max-w-xl flex-col items-start justify-between">
-            <div class="flex items-center gap-x-4 text-xs">
-              <time class="text-gray-400">Recent</time>
-              <span class="relative z-10 rounded-full bg-accent-blue px-3 py-1.5 font-medium text-white">DevOps</span>
-            </div>
-            <div class="group relative">
-              <h3 class="mt-3 text-lg font-semibold leading-6 group-hover:text-accent-blue transition-colors">
-                <a href="/writing">
-                  <span class="absolute inset-0"></span>
-                  Kubernetes Platform Engineering at Scale
-                </a>
-              </h3>
-              <p class="mt-5 line-clamp-3 text-sm leading-6 text-gray-300">
-                Building multi-tenancy Kubernetes platforms with GitOps, service mesh, and comprehensive observability.
-              </p>
-            </div>
-          </article>
-          <article class="flex max-w-xl flex-col items-start justify-between">
-            <div class="flex items-center gap-x-4 text-xs">
-              <time class="text-gray-400">Recent</time>
-              <span class="relative z-10 rounded-full bg-signal-green px-3 py-1.5 font-medium text-white">AI</span>
-            </div>
-            <div class="group relative">
-              <h3 class="mt-3 text-lg font-semibold leading-6 group-hover:text-signal-green transition-colors">
-                <a href="/projects">
-                  <span class="absolute inset-0"></span>
-                  Urnlabs Platform Architecture
-                </a>
-              </h3>
-              <p class="mt-5 line-clamp-3 text-sm leading-6 text-gray-300">
-                Designing and implementing the technical infrastructure for enterprise AI agent workflows.
-              </p>
-            </div>
-          </article>
-          <article class="flex max-w-xl flex-col items-start justify-between">
-            <div class="flex items-center gap-x-4 text-xs">
-              <time class="text-gray-400">Recent</time>
-              <span class="relative z-10 rounded-full bg-purple-600 px-3 py-1.5 font-medium text-white">Speaking</span>
-            </div>
-            <div class="group relative">
-              <h3 class="mt-3 text-lg font-semibold leading-6 group-hover:text-purple-400 transition-colors">
-                <a href="/talks">
-                  <span class="absolute inset-0"></span>
-                  Cloud-Native Security Patterns
-                </a>
-              </h3>
-              <p class="mt-5 line-clamp-3 text-sm leading-6 text-gray-300">
-                Conference talk on implementing zero-trust security in Kubernetes environments.
-              </p>
-            </div>
-          </article>
+        
+        <!-- View All Projects Link -->
+        <div class="text-center mt-12">
+          <a href="/projects" class="inline-flex items-center text-lg font-medium text-gray-900 hover:text-gray-600 transition-colors">
+            View All Projects
+            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+          </a>
         </div>
       </div>
     </section>
 
-    <!-- CTA Section -->
-    <section class="bg-primary-bg">
-      <div class="px-6 py-24 sm:px-6 sm:py-32 lg:px-8">
-        <div class="mx-auto max-w-2xl text-center">
-          <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">
-            Let's work together
-          </h2>
-          <p class="mx-auto mt-6 max-w-xl text-lg leading-8 text-gray-300">
-            Available for consulting on cloud infrastructure, DevOps transformation, and AI platform architecture.
-          </p>
-          <div class="mt-10 flex items-center justify-center gap-x-6">
-            <a
-              href="/contact"
-              class="rounded-md bg-accent-blue px-8 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
-            >
-              Start a Conversation
-            </a>
-            <a
-              href="/resume"
-              class="text-sm font-semibold leading-6 text-white hover:text-accent-blue transition-colors"
-            >
-              Download Resume <span aria-hidden="true">→</span>
-            </a>
-          </div>
+    <!-- Latest Insights Section -->
+    <section id="insights" class="py-20 bg-cto-secondary-bg">
+      <div class="max-w-7xl mx-auto px-6">
+        <h2 class="text-3xl font-light text-center mb-16 text-gray-900">
+          Latest Insights
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {latestInsights.map((insight, index) => (
+            <article class="p-6 bg-white bg-opacity-85 backdrop-blur-sm border border-white border-opacity-20 rounded-xl shadow-sm hover:transform hover:-translate-y-2 transition-all duration-300 hover:shadow-lg" data-animate="fade-up" style={`animation-delay: ${index * 100}ms`}>
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <time class="text-sm text-gray-500">
+                    {insight.date}
+                  </time>
+                  <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium">
+                    {insight.category}
+                  </span>
+                </div>
+                
+                <h3 class="text-xl font-semibold text-gray-900">
+                  <a href={insight.url} class="hover:text-gray-600 transition-colors">
+                    {insight.title}
+                  </a>
+                </h3>
+                
+                <p class="text-gray-600">
+                  {insight.excerpt}
+                </p>
+                
+                <a href={insight.url} class="inline-flex items-center text-sm font-medium text-gray-900 hover:text-gray-600 transition-colors">
+                  Read More
+                  <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+              </div>
+            </article>
+          ))}
+        </div>
+        
+        <!-- View All Insights Link -->
+        <div class="text-center mt-12">
+          <a href="/insights" class="inline-flex items-center text-lg font-medium text-gray-900 hover:text-gray-600 transition-colors">
+            View All Insights
+            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+          </a>
         </div>
       </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="bg-cto-accent-bg">
+      <ContactForm />
     </section>
   </main>
+
+  <!-- Enhanced JavaScript -->
+  <script>
+    // Initialize Lucide icons
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
+
+    // Enhanced scroll-triggered animations
+    class PortfolioAnimationController {
+      constructor() {
+        this.animatedElements = document.querySelectorAll('[data-animate]');
+        this.init();
+      }
+
+      init() {
+        this.setupIntersectionObserver();
+        this.setupSmoothScrolling();
+        this.setupPerformanceOptimizations();
+      }
+
+      setupIntersectionObserver() {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                const animationType = entry.target.getAttribute('data-animate');
+                entry.target.classList.add(`cto-animate-${animationType}`);
+                observer.unobserve(entry.target);
+              }
+            });
+          },
+          {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+          }
+        );
+
+        this.animatedElements.forEach((el) => {
+          observer.observe(el);
+        });
+      }
+
+      setupSmoothScrolling() {
+        // Enhanced smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+          anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+              const offsetTop = target.offsetTop - 80;
+              window.scrollTo({
+                top: offsetTop,
+                behavior: 'smooth'
+              });
+            }
+          });
+        });
+      }
+
+      setupPerformanceOptimizations() {
+        // Reduce motion for users who prefer it
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        
+        if (prefersReducedMotion) {
+          document.documentElement.style.setProperty('--cto-transition-fast', '0s');
+          document.documentElement.style.setProperty('--cto-transition-normal', '0s');
+          document.documentElement.style.setProperty('--cto-transition-slow', '0s');
+        }
+      }
+    }
+
+    // Initialize animation controller when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        new PortfolioAnimationController();
+      });
+    } else {
+      new PortfolioAnimationController();
+    }
+  </script>
 </BaseLayout>

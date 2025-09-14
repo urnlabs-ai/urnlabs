@@ -1,0 +1,585 @@
+---
+/**
+ * Contact Form Component
+ * Professional contact form with validation and glassmorphism styling
+ */
+
+export interface Props {
+  title?: string;
+  subtitle?: string;
+  className?: string;
+}
+
+const { 
+  title = "Let's Connect",
+  subtitle = "Interested in discussing AI solutions for your organization? Let's start a conversation.",
+  className = ''
+} = Astro.props;
+---
+
+<section class={`contact-form-section py-16 ${className}`}>
+  <div class="max-w-2xl mx-auto text-center">
+    <!-- Header -->
+    <div class="mb-12 space-y-4">
+      <h2 class="cto-heading-section text-3xl font-light text-cto-text-primary">
+        {title}
+      </h2>
+      <p class="cto-body-primary text-cto-text-secondary max-w-lg mx-auto">
+        {subtitle}
+      </p>
+    </div>
+
+    <!-- Contact Form -->
+    <div class="cto-glass-card p-8 md:p-10 text-left">
+      <form id="contact-form" class="space-y-6" novalidate>
+        <!-- Name Field -->
+        <div class="form-group">
+          <label for="name" class="form-label block text-sm font-medium text-cto-text-primary mb-2">
+            Name *
+          </label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            required
+            class="cto-form-input w-full"
+            placeholder="Your full name"
+            aria-describedby="name-error"
+          >
+          <div id="name-error" class="form-error hidden text-red-500 text-sm mt-1"></div>
+        </div>
+
+        <!-- Email Field -->
+        <div class="form-group">
+          <label for="email" class="form-label block text-sm font-medium text-cto-text-primary mb-2">
+            Email *
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            class="cto-form-input w-full"
+            placeholder="your.email@example.com"
+            aria-describedby="email-error"
+          >
+          <div id="email-error" class="form-error hidden text-red-500 text-sm mt-1"></div>
+        </div>
+
+        <!-- Company Field (Optional) -->
+        <div class="form-group">
+          <label for="company" class="form-label block text-sm font-medium text-cto-text-primary mb-2">
+            Company
+          </label>
+          <input
+            type="text"
+            id="company"
+            name="company"
+            class="cto-form-input w-full"
+            placeholder="Your company name (optional)"
+          >
+        </div>
+
+        <!-- Subject Field -->
+        <div class="form-group">
+          <label for="subject" class="form-label block text-sm font-medium text-cto-text-primary mb-2">
+            Subject *
+          </label>
+          <select
+            id="subject"
+            name="subject"
+            required
+            class="cto-form-input w-full"
+            aria-describedby="subject-error"
+          >
+            <option value="">Select a topic</option>
+            <option value="consulting">AI/ML Consulting</option>
+            <option value="architecture">System Architecture</option>
+            <option value="devops">DevOps Transformation</option>
+            <option value="speaking">Speaking Opportunity</option>
+            <option value="collaboration">Collaboration</option>
+            <option value="other">Other</option>
+          </select>
+          <div id="subject-error" class="form-error hidden text-red-500 text-sm mt-1"></div>
+        </div>
+
+        <!-- Message Field -->
+        <div class="form-group">
+          <label for="message" class="form-label block text-sm font-medium text-cto-text-primary mb-2">
+            Message *
+          </label>
+          <textarea
+            id="message"
+            name="message"
+            required
+            rows="5"
+            class="cto-form-textarea w-full"
+            placeholder="Tell me about your project or how I can help..."
+            aria-describedby="message-error"
+          ></textarea>
+          <div id="message-error" class="form-error hidden text-red-500 text-sm mt-1"></div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="pt-4">
+          <button
+            type="submit"
+            class="cto-btn-primary w-full md:w-auto min-w-[200px] justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+            id="submit-btn"
+          >
+            <span class="submit-text">Send Message</span>
+            <i data-lucide="send" class="ml-2 w-4 h-4 submit-icon"></i>
+            
+            <!-- Loading Spinner -->
+            <div class="loading-spinner hidden ml-2">
+              <div class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+            </div>
+          </button>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div id="form-message" class="form-message hidden p-4 rounded-lg text-sm"></div>
+      </form>
+    </div>
+
+    <!-- Contact Info -->
+    <div class="mt-12 space-y-4 text-center">
+      <p class="text-cto-text-secondary text-sm">
+        Prefer email? Reach out directly at 
+        <a href="mailto:hello@usmanramzan.ai" class="text-cto-text-primary font-medium hover:text-cto-text-secondary transition-colors">
+          hello@usmanramzan.ai
+        </a>
+      </p>
+      
+      <div class="flex justify-center space-x-6">
+        <a 
+          href="https://www.linkedin.com/in/mramzan-pk" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="text-cto-text-secondary hover:text-cto-text-primary transition-colors"
+          aria-label="LinkedIn Profile"
+        >
+          <i data-lucide="linkedin" class="w-5 h-5"></i>
+        </a>
+        <a 
+          href="https://github.com/mramzan-pk" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="text-cto-text-secondary hover:text-cto-text-primary transition-colors"
+          aria-label="GitHub Profile"
+        >
+          <i data-lucide="github" class="w-5 h-5"></i>
+        </a>
+        <a 
+          href="https://twitter.com/mramzan_pk" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="text-cto-text-secondary hover:text-cto-text-primary transition-colors"
+          aria-label="Twitter Profile"
+        >
+          <i data-lucide="twitter" class="w-5 h-5"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .contact-form-section {
+    background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  }
+
+  /* Enhanced form styling */
+  .form-group {
+    position: relative;
+  }
+
+  .form-label {
+    transition: all 0.2s ease;
+  }
+
+  .cto-form-input,
+  .cto-form-textarea {
+    transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  .cto-form-input:focus,
+  .cto-form-textarea:focus {
+    transform: translateY(-1px);
+    box-shadow: 
+      0 0 0 3px rgba(26, 26, 26, 0.1),
+      0 5px 15px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Loading spinner animation */
+  .loading-spinner {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Form validation states */
+  .form-group.error .cto-form-input,
+  .form-group.error .cto-form-textarea {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  }
+
+  .form-group.success .cto-form-input,
+  .form-group.success .cto-form-textarea {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  }
+
+  .form-error {
+    animation: errorSlideDown 0.3s ease-out;
+  }
+
+  @keyframes errorSlideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Success/Error message styling */
+  .form-message.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #065f46;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+  }
+
+  .form-message.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #991b1b;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  /* Button states */
+  .cto-btn-primary:disabled {
+    background: rgba(26, 26, 26, 0.5);
+    cursor: not-allowed;
+  }
+
+  .cto-btn-primary.loading .submit-text {
+    opacity: 0;
+  }
+
+  .cto-btn-primary.loading .submit-icon {
+    opacity: 0;
+  }
+
+  .cto-btn-primary.loading .loading-spinner {
+    display: flex;
+  }
+
+  /* Dark mode support */
+  @media (prefers-color-scheme: dark) {
+    .contact-form-section {
+      background: linear-gradient(135deg, #111111 0%, #1a1a1a 100%);
+    }
+
+    .form-message.success {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+    }
+
+    .form-message.error {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+    }
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    .contact-form-section {
+      padding: 2rem 1rem;
+    }
+
+    .cto-glass-card {
+      padding: 1.5rem;
+    }
+
+    .cto-btn-primary {
+      width: 100%;
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .cto-form-input,
+    .cto-form-textarea,
+    .form-label {
+      transition: none;
+    }
+
+    .cto-form-input:focus,
+    .cto-form-textarea:focus {
+      transform: none;
+    }
+
+    .form-error {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  /**
+   * Contact Form Controller
+   * Handles validation, submission, and user feedback
+   */
+  class ContactFormController {
+    constructor() {
+      this.form = document.getElementById('contact-form');
+      this.submitBtn = document.getElementById('submit-btn');
+      this.formMessage = document.getElementById('form-message');
+      this.fields = {
+        name: document.getElementById('name'),
+        email: document.getElementById('email'),
+        company: document.getElementById('company'),
+        subject: document.getElementById('subject'),
+        message: document.getElementById('message')
+      };
+      
+      this.init();
+    }
+
+    init() {
+      if (!this.form) return;
+      
+      this.setupEventListeners();
+      this.setupValidation();
+    }
+
+    setupEventListeners() {
+      // Form submission
+      this.form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.handleSubmit();
+      });
+
+      // Real-time validation
+      Object.values(this.fields).forEach(field => {
+        if (field) {
+          field.addEventListener('blur', () => this.validateField(field));
+          field.addEventListener('input', () => this.clearFieldError(field));
+        }
+      });
+    }
+
+    setupValidation() {
+      // Email validation regex
+      this.emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      
+      // Validation rules
+      this.validationRules = {
+        name: {
+          required: true,
+          minLength: 2,
+          maxLength: 100
+        },
+        email: {
+          required: true,
+          pattern: this.emailRegex
+        },
+        subject: {
+          required: true
+        },
+        message: {
+          required: true,
+          minLength: 10,
+          maxLength: 1000
+        }
+      };
+    }
+
+    validateField(field) {
+      const fieldName = field.name;
+      const value = field.value.trim();
+      const rules = this.validationRules[fieldName];
+      const errorElement = document.getElementById(`${fieldName}-error`);
+      const formGroup = field.closest('.form-group');
+
+      if (!rules) return true;
+
+      let isValid = true;
+      let errorMessage = '';
+
+      // Required validation
+      if (rules.required && !value) {
+        isValid = false;
+        errorMessage = 'This field is required.';
+      }
+      // Email pattern validation
+      else if (rules.pattern && value && !rules.pattern.test(value)) {
+        isValid = false;
+        errorMessage = 'Please enter a valid email address.';
+      }
+      // Length validation
+      else if (rules.minLength && value && value.length < rules.minLength) {
+        isValid = false;
+        errorMessage = `Minimum ${rules.minLength} characters required.`;
+      }
+      else if (rules.maxLength && value && value.length > rules.maxLength) {
+        isValid = false;
+        errorMessage = `Maximum ${rules.maxLength} characters allowed.`;
+      }
+
+      // Update UI
+      if (isValid) {
+        formGroup.classList.remove('error');
+        formGroup.classList.add('success');
+        errorElement.classList.add('hidden');
+      } else {
+        formGroup.classList.remove('success');
+        formGroup.classList.add('error');
+        errorElement.textContent = errorMessage;
+        errorElement.classList.remove('hidden');
+      }
+
+      return isValid;
+    }
+
+    clearFieldError(field) {
+      const formGroup = field.closest('.form-group');
+      const errorElement = document.getElementById(`${field.name}-error`);
+      
+      formGroup.classList.remove('error');
+      errorElement.classList.add('hidden');
+      
+      if (field.value.trim()) {
+        // Re-validate on input if there's content
+        setTimeout(() => this.validateField(field), 500);
+      }
+    }
+
+    validateForm() {
+      let isFormValid = true;
+      
+      Object.values(this.fields).forEach(field => {
+        if (field && this.validationRules[field.name]) {
+          const isFieldValid = this.validateField(field);
+          if (!isFieldValid) {
+            isFormValid = false;
+          }
+        }
+      });
+
+      return isFormValid;
+    }
+
+    async handleSubmit() {
+      if (!this.validateForm()) {
+        this.showMessage('Please correct the errors above.', 'error');
+        return;
+      }
+
+      this.setSubmitState(true);
+
+      try {
+        const formData = new FormData(this.form);
+        const data = Object.fromEntries(formData);
+
+        // Simulate API call (replace with actual endpoint)
+        const response = await this.submitForm(data);
+
+        if (response.success) {
+          this.showMessage('Thank you! Your message has been sent successfully. I\'ll get back to you soon.', 'success');
+          this.form.reset();
+          this.clearAllErrors();
+        } else {
+          throw new Error(response.message || 'Failed to send message');
+        }
+      } catch (error) {
+        console.error('Form submission error:', error);
+        this.showMessage('Sorry, there was an error sending your message. Please try again or email me directly.', 'error');
+      } finally {
+        this.setSubmitState(false);
+      }
+    }
+
+    async submitForm(data) {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // For demo purposes, always return success
+      // Replace this with actual API call
+      return {
+        success: true,
+        message: 'Message sent successfully'
+      };
+      
+      /* Real implementation would look like:
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      
+      return await response.json();
+      */
+    }
+
+    setSubmitState(isSubmitting) {
+      this.submitBtn.disabled = isSubmitting;
+      this.submitBtn.classList.toggle('loading', isSubmitting);
+      
+      const submitText = this.submitBtn.querySelector('.submit-text');
+      const submitIcon = this.submitBtn.querySelector('.submit-icon');
+      const loadingSpinner = this.submitBtn.querySelector('.loading-spinner');
+      
+      if (isSubmitting) {
+        submitText.textContent = 'Sending...';
+        submitIcon.style.display = 'none';
+        loadingSpinner.classList.remove('hidden');
+      } else {
+        submitText.textContent = 'Send Message';
+        submitIcon.style.display = 'inline';
+        loadingSpinner.classList.add('hidden');
+      }
+    }
+
+    showMessage(message, type) {
+      this.formMessage.textContent = message;
+      this.formMessage.className = `form-message ${type}`;
+      this.formMessage.classList.remove('hidden');
+      
+      // Auto-hide success messages after 5 seconds
+      if (type === 'success') {
+        setTimeout(() => {
+          this.formMessage.classList.add('hidden');
+        }, 5000);
+      }
+    }
+
+    clearAllErrors() {
+      document.querySelectorAll('.form-group').forEach(group => {
+        group.classList.remove('error', 'success');
+      });
+      
+      document.querySelectorAll('.form-error').forEach(error => {
+        error.classList.add('hidden');
+      });
+    }
+  }
+
+  // Initialize form controller
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      new ContactFormController();
+    });
+  } else {
+    new ContactFormController();
+  }
+
+  // Reinitialize for dynamic content
+  document.addEventListener('astro:page-load', () => {
+    new ContactFormController();
+  });
+</script>

@@ -1,0 +1,496 @@
+/**
+ * CTO Portfolio Enhanced Theme System
+ * Extends existing glassmorphism system for modern portfolio aesthetics
+ * Integrates with usmanramzan.ai Tailwind configuration
+ */
+
+/* ============================================================================
+   ENHANCED COLOR SYSTEM - Extending existing glass/gradient/interactive
+   ============================================================================ */
+
+:root {
+  /* Portfolio-specific color enhancements */
+  --cto-primary-bg: #fafafa;
+  --cto-secondary-bg: #ffffff;
+  --cto-accent-bg: #f5f5f5;
+  --cto-text-primary: #1a1a1a;
+  --cto-text-secondary: #666666;
+  --cto-text-muted: #999999;
+  
+  /* Enhanced glassmorphism for light portfolio theme */
+  --cto-glass-bg-ultra: rgba(255, 255, 255, 0.95);
+  --cto-glass-bg-light: rgba(255, 255, 255, 0.85);
+  --cto-glass-bg-medium: rgba(255, 255, 255, 0.75);
+  --cto-glass-border: rgba(255, 255, 255, 0.20);
+  --cto-glass-shadow: rgba(0, 0, 0, 0.05);
+  
+  /* CTO-specific gradient system */
+  --cto-gradient-primary: linear-gradient(135deg, #1a1a1a 0%, #666666 100%);
+  --cto-gradient-secondary: linear-gradient(135deg, #f5f5f5 0%, #e5e5e5 100%);
+  --cto-gradient-accent: linear-gradient(135deg, rgba(26, 26, 26, 0.05) 0%, rgba(26, 26, 26, 0.02) 100%);
+  
+  /* Enhanced interactive states for portfolio */
+  --cto-hover-lift: translateY(-5px);
+  --cto-hover-shadow: 0 15px 30px rgba(0, 0, 0, 0.05);
+  --cto-active-transform: scale(1.02);
+  --cto-focus-ring: 0 0 0 3px rgba(26, 26, 26, 0.1);
+  
+  /* Typography enhancement */
+  --cto-font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --cto-font-body: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --cto-font-mono: 'JetBrains Mono', 'Space Mono', monospace;
+  
+  /* Enhanced spacing system */
+  --cto-spacing-xs: 0.5rem;
+  --cto-spacing-sm: 1rem;
+  --cto-spacing-md: 1.5rem;
+  --cto-spacing-lg: 2rem;
+  --cto-spacing-xl: 3rem;
+  --cto-spacing-2xl: 4rem;
+  --cto-spacing-3xl: 6rem;
+  
+  /* Border radius enhancements */
+  --cto-radius-sm: 10px;
+  --cto-radius-md: 20px;
+  --cto-radius-lg: 30px;
+  --cto-radius-full: 9999px;
+  
+  /* Animation timing and easing */
+  --cto-transition-fast: 0.15s ease-out;
+  --cto-transition-normal: 0.3s ease-out;
+  --cto-transition-slow: 0.6s ease-out;
+  --cto-easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --cto-easing-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* ============================================================================
+   ENHANCED GLASSMORPHISM SYSTEM
+   ============================================================================ */
+
+.cto-glass-nav {
+  background: var(--cto-glass-bg-ultra);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--cto-glass-border);
+  box-shadow: 0 2px 12px var(--cto-glass-shadow);
+}
+
+.cto-glass-card {
+  background: var(--cto-glass-bg-light);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--cto-glass-border);
+  border-radius: var(--cto-radius-md);
+  box-shadow: 
+    0 4px 12px var(--cto-glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all var(--cto-transition-normal);
+}
+
+.cto-glass-card:hover {
+  transform: var(--cto-hover-lift);
+  box-shadow: var(--cto-hover-shadow);
+  backdrop-filter: blur(12px);
+  background: var(--cto-glass-bg-medium);
+}
+
+.cto-glass-hero {
+  background: var(--cto-gradient-secondary);
+  position: relative;
+  overflow: hidden;
+}
+
+.cto-glass-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--cto-gradient-accent);
+  z-index: 1;
+}
+
+/* ============================================================================
+   ENHANCED TYPOGRAPHY SYSTEM
+   ============================================================================ */
+
+.cto-heading-hero {
+  font-family: var(--cto-font-display);
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  font-weight: 300;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  background: var(--cto-gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cto-heading-section {
+  font-family: var(--cto-font-display);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 300;
+  color: var(--cto-text-primary);
+  text-align: center;
+  margin-bottom: var(--cto-spacing-2xl);
+}
+
+.cto-heading-card {
+  font-family: var(--cto-font-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--cto-text-primary);
+  margin-bottom: var(--cto-spacing-sm);
+}
+
+.cto-body-primary {
+  font-family: var(--cto-font-body);
+  font-size: 1.1rem;
+  color: var(--cto-text-secondary);
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+.cto-body-secondary {
+  font-family: var(--cto-font-body);
+  font-size: 0.9rem;
+  color: var(--cto-text-muted);
+  line-height: 1.5;
+  font-weight: 300;
+}
+
+.cto-code {
+  font-family: var(--cto-font-mono);
+  font-size: 0.9rem;
+  background: rgba(26, 26, 26, 0.05);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+}
+
+/* ============================================================================
+   ENHANCED BUTTON SYSTEM
+   ============================================================================ */
+
+.cto-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: var(--cto-text-primary);
+  color: #ffffff;
+  font-family: var(--cto-font-body);
+  font-weight: 500;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+  border: none;
+  border-radius: var(--cto-radius-full);
+  cursor: pointer;
+  transition: all var(--cto-transition-normal);
+  text-decoration: none;
+}
+
+.cto-btn-primary:hover {
+  transform: var(--cto-hover-lift);
+  box-shadow: var(--cto-hover-shadow);
+}
+
+.cto-btn-primary:focus {
+  outline: none;
+  box-shadow: var(--cto-focus-ring);
+}
+
+.cto-btn-primary:active {
+  transform: var(--cto-active-transform);
+}
+
+.cto-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--cto-font-body);
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--cto-text-primary);
+  text-decoration: none;
+  transition: all var(--cto-transition-normal);
+}
+
+.cto-btn-secondary:hover {
+  color: var(--cto-text-secondary);
+  gap: 0.75rem;
+}
+
+.cto-btn-link {
+  color: var(--cto-text-primary);
+  font-weight: 500;
+  font-size: 0.9rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all var(--cto-transition-normal);
+}
+
+.cto-btn-link:hover {
+  gap: 0.75rem;
+}
+
+/* ============================================================================
+   ENHANCED FORM SYSTEM
+   ============================================================================ */
+
+.cto-form-input {
+  width: 100%;
+  padding: 1rem;
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: var(--cto-radius-sm);
+  font-family: var(--cto-font-body);
+  font-size: 0.9rem;
+  transition: all var(--cto-transition-normal);
+}
+
+.cto-form-input:focus {
+  outline: none;
+  border-color: var(--cto-text-primary);
+  box-shadow: 
+    var(--cto-focus-ring),
+    0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+.cto-form-textarea {
+  width: 100%;
+  padding: 1rem;
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: var(--cto-radius-sm);
+  font-family: var(--cto-font-body);
+  font-size: 0.9rem;
+  resize: vertical;
+  min-height: 120px;
+  transition: all var(--cto-transition-normal);
+}
+
+.cto-form-textarea:focus {
+  outline: none;
+  border-color: var(--cto-text-primary);
+  box-shadow: 
+    var(--cto-focus-ring),
+    0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* ============================================================================
+   ENHANCED GEOMETRIC PATTERNS
+   ============================================================================ */
+
+.cto-pattern-dots {
+  background-image: radial-gradient(#e5e5e5 1px, transparent 1px);
+  background-size: 30px 30px;
+  opacity: 0.3;
+}
+
+.cto-pattern-grid {
+  background-image: 
+    linear-gradient(rgba(229, 229, 229, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(229, 229, 229, 0.3) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.cto-circle-float {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: var(--cto-gradient-accent);
+  animation: cto-float 6s ease-in-out infinite;
+}
+
+.cto-circle-float:nth-child(2) {
+  animation-delay: -2s;
+  animation-duration: 8s;
+}
+
+.cto-circle-float:nth-child(3) {
+  animation-delay: -4s;
+  animation-duration: 10s;
+}
+
+/* ============================================================================
+   ENHANCED ANIMATION KEYFRAMES
+   ============================================================================ */
+
+@keyframes cto-float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+    opacity: 0.1;
+  }
+}
+
+@keyframes cto-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cto-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes cto-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes cto-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ============================================================================
+   ANIMATION UTILITY CLASSES
+   ============================================================================ */
+
+.cto-animate-fade-up {
+  animation: cto-fade-up 0.6s var(--cto-easing-smooth) forwards;
+}
+
+.cto-animate-scale-in {
+  animation: cto-scale-in 0.5s var(--cto-easing-bounce) forwards;
+}
+
+.cto-animate-slide-in-right {
+  animation: cto-slide-in-right 0.6s var(--cto-easing-smooth) forwards;
+}
+
+.cto-animate-delay-100 {
+  animation-delay: 0.1s;
+}
+
+.cto-animate-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.cto-animate-delay-300 {
+  animation-delay: 0.3s;
+}
+
+.cto-animate-delay-400 {
+  animation-delay: 0.4s;
+}
+
+/* ============================================================================
+   RESPONSIVE ENHANCEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  :root {
+    --cto-spacing-xl: 2rem;
+    --cto-spacing-2xl: 3rem;
+    --cto-spacing-3xl: 4rem;
+  }
+  
+  .cto-heading-hero {
+    font-size: 2.5rem;
+    line-height: 1.1;
+  }
+  
+  .cto-heading-section {
+    font-size: 1.8rem;
+    margin-bottom: var(--cto-spacing-xl);
+  }
+  
+  .cto-glass-card {
+    margin-bottom: var(--cto-spacing-lg);
+  }
+  
+  .cto-btn-primary,
+  .cto-btn-secondary {
+    font-size: 0.95rem;
+    padding: 0.875rem 1.5rem;
+  }
+}
+
+/* ============================================================================
+   ACCESSIBILITY ENHANCEMENTS
+   ============================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .cto-glass-card,
+  .cto-btn-primary,
+  .cto-btn-secondary,
+  .cto-btn-link,
+  .cto-form-input,
+  .cto-form-textarea {
+    transition: none;
+  }
+  
+  .cto-animate-fade-up,
+  .cto-animate-scale-in,
+  .cto-animate-slide-in-right,
+  .cto-circle-float {
+    animation: none;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cto-primary-bg: #111111;
+    --cto-secondary-bg: #1a1a1a;
+    --cto-accent-bg: #222222;
+    --cto-text-primary: #f5f5f5;
+    --cto-text-secondary: #cccccc;
+    --cto-text-muted: #999999;
+    
+    --cto-glass-bg-ultra: rgba(26, 26, 26, 0.95);
+    --cto-glass-bg-light: rgba(26, 26, 26, 0.85);
+    --cto-glass-bg-medium: rgba(26, 26, 26, 0.75);
+    --cto-glass-border: rgba(255, 255, 255, 0.1);
+    --cto-glass-shadow: rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* ============================================================================
+   HIGH CONTRAST MODE SUPPORT
+   ============================================================================ */
+
+@media (prefers-contrast: high) {
+  :root {
+    --cto-glass-border: rgba(0, 0, 0, 0.5);
+    --cto-text-secondary: var(--cto-text-primary);
+  }
+  
+  .cto-glass-card {
+    border-width: 2px;
+  }
+  
+  .cto-btn-primary {
+    border: 2px solid transparent;
+  }
+  
+  .cto-btn-primary:focus {
+    border-color: currentColor;
+  }
+}

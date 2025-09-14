@@ -1,0 +1,238 @@
+---
+/**
+ * Expertise Card Component
+ * Glassmorphism card for showcasing technical expertise areas
+ */
+
+export interface Props {
+  icon: string; // Lucide icon name
+  title: string;
+  description: string;
+  index?: number; // For staggered animations
+  className?: string;
+}
+
+const { 
+  icon, 
+  title, 
+  description, 
+  index = 0, 
+  className = '' 
+} = Astro.props;
+
+// Generate animation delay for staggered entrance
+const animationDelay = `${index * 100}ms`;
+---
+
+<div 
+  class={`cto-glass-card expertise-card p-8 transition-all duration-300 hover:transform hover:-translate-y-2 hover:shadow-lg opacity-0 ${className}`}
+  style={`animation-delay: ${animationDelay}`}
+  data-animate="fade-up"
+>
+  <!-- Icon Container -->
+  <div class="mb-6">
+    <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-cto-text-primary to-cto-text-secondary flex items-center justify-center transition-transform duration-300 hover:scale-110 hover:rotate-3">
+      <i data-lucide={icon} class="w-6 h-6 text-white"></i>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="space-y-4">
+    <h3 class="cto-heading-card text-xl font-semibold text-cto-text-primary">
+      {title}
+    </h3>
+    
+    <p class="cto-body-secondary text-cto-text-secondary leading-relaxed">
+      {description}
+    </p>
+  </div>
+
+  <!-- Hover Effect Overlay -->
+  <div class="absolute inset-0 rounded-lg bg-gradient-to-br from-transparent to-cto-text-primary opacity-0 transition-opacity duration-300 hover:opacity-5 pointer-events-none"></div>
+</div>
+
+<style>
+  .expertise-card {
+    position: relative;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    box-shadow: 
+      0 4px 12px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .expertise-card:hover {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(12px);
+    box-shadow: 
+      0 15px 30px rgba(0, 0, 0, 0.05),
+      0 5px 15px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  /* Animation classes */
+  .expertise-card[data-animate="fade-up"] {
+    animation: expertiseFadeUp 0.6s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+  }
+
+  @keyframes expertiseFadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* Icon gradient variations */
+  .expertise-card:nth-child(3n+1) .w-12 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .expertise-card:nth-child(3n+2) .w-12 {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  }
+
+  .expertise-card:nth-child(3n+3) .w-12 {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  }
+
+  /* Enhanced hover effects */
+  .expertise-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .expertise-card:hover::before {
+    opacity: 1;
+  }
+
+  /* Dark mode support */
+  @media (prefers-color-scheme: dark) {
+    .expertise-card {
+      background: rgba(26, 26, 26, 0.85);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .expertise-card:hover {
+      background: rgba(26, 26, 26, 0.9);
+      box-shadow: 
+        0 15px 30px rgba(0, 0, 0, 0.2),
+        0 5px 15px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  /* High contrast mode */
+  @media (prefers-contrast: high) {
+    .expertise-card {
+      border-width: 2px;
+      border-color: rgba(0, 0, 0, 0.3);
+    }
+
+    .expertise-card:hover {
+      border-color: rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .expertise-card {
+      transition: none;
+      animation: none !important;
+    }
+
+    .expertise-card[data-animate="fade-up"] {
+      opacity: 1;
+      transform: none;
+    }
+
+    .w-12 {
+      transition: none;
+    }
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    .expertise-card {
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .expertise-card:hover {
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+  /**
+   * Expertise Card Intersection Observer
+   * Triggers animations when cards come into view
+   */
+  class ExpertiseCardAnimator {
+    constructor() {
+      this.cards = document.querySelectorAll('.expertise-card[data-animate]');
+      this.init();
+    }
+
+    init() {
+      // Create intersection observer with optimized settings
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              // Add animation class with slight delay for performance
+              requestAnimationFrame(() => {
+                entry.target.style.animationPlayState = 'running';
+              });
+              
+              // Stop observing once animated
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        {
+          threshold: 0.1,
+          rootMargin: '0px 0px -50px 0px'
+        }
+      );
+
+      // Start observing all cards
+      this.cards.forEach((card) => {
+        // Pause animation initially
+        card.style.animationPlayState = 'paused';
+        observer.observe(card);
+      });
+    }
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      new ExpertiseCardAnimator();
+    });
+  } else {
+    new ExpertiseCardAnimator();
+  }
+
+  // Reinitialize if content is dynamically loaded
+  document.addEventListener('astro:page-load', () => {
+    new ExpertiseCardAnimator();
+  });
+</script>

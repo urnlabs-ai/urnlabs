@@ -1,0 +1,315 @@
+---
+/**
+ * Fixed Glassmorphism Navigation Component
+ * Modern CTO Portfolio Navigation with smooth scroll
+ */
+
+export interface Props {
+  currentPath?: string;
+}
+
+const { currentPath = '/' } = Astro.props;
+
+const navLinks = [
+  { href: '#expertise', label: 'Expertise' },
+  { href: '#projects', label: 'Projects' },
+  { href: '#insights', label: 'Insights' },
+  { href: '#contact', label: 'Contact' }
+];
+---
+
+<nav class="cto-glass-nav fixed top-0 left-0 w-full z-50 transition-all duration-300">
+  <div class="max-w-7xl mx-auto px-6 py-4">
+    <div class="flex justify-between items-center">
+      <!-- Logo -->
+      <div class="flex items-center">
+        <a 
+          href="/" 
+          class="text-xl font-semibold tracking-tight text-cto-text-primary hover:text-cto-text-secondary transition-colors duration-300"
+          aria-label="Usman Ramzan - Home"
+        >
+          thomas.ai
+        </a>
+      </div>
+
+      <!-- Desktop Navigation -->
+      <div class="hidden md:flex items-center space-x-8">
+        {navLinks.map((link) => (
+          <a
+            href={link.href}
+            class="nav-link text-sm font-medium text-cto-text-secondary hover:text-cto-text-primary transition-all duration-300 relative group"
+            data-scroll-to={link.href}
+          >
+            {link.label}
+            <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-cto-text-primary transition-all duration-200 group-hover:w-full"></span>
+          </a>
+        ))}
+      </div>
+
+      <!-- Mobile Menu Button -->
+      <button 
+        class="md:hidden relative w-6 h-6 flex flex-col justify-center items-center space-y-1 group"
+        aria-label="Toggle mobile menu"
+        id="mobile-menu-button"
+      >
+        <span class="block w-5 h-0.5 bg-cto-text-primary transition-all duration-300 group-hover:bg-cto-text-secondary mobile-menu-line-1"></span>
+        <span class="block w-5 h-0.5 bg-cto-text-primary transition-all duration-300 group-hover:bg-cto-text-secondary mobile-menu-line-2"></span>
+        <span class="block w-5 h-0.5 bg-cto-text-primary transition-all duration-300 group-hover:bg-cto-text-secondary mobile-menu-line-3"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile Menu Overlay -->
+  <div 
+    class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 md:hidden"
+    id="mobile-menu-overlay"
+  ></div>
+
+  <!-- Mobile Menu -->
+  <div 
+    class="fixed top-0 right-0 h-full w-80 bg-white transform translate-x-full transition-transform duration-300 md:hidden shadow-2xl"
+    id="mobile-menu"
+  >
+    <div class="p-6 pt-20">
+      <div class="space-y-6">
+        {navLinks.map((link, index) => (
+          <a
+            href={link.href}
+            class="mobile-nav-link block text-lg font-medium text-cto-text-primary hover:text-cto-text-secondary transition-colors duration-300 opacity-0 transform translate-x-4"
+            data-scroll-to={link.href}
+            style={`transition-delay: ${(index + 1) * 50}ms`}
+          >
+            {link.label}
+          </a>
+        ))}
+      </div>
+    </div>
+  </div>
+</nav>
+
+<style>
+  /* Enhanced glassmorphism navigation styles */
+  .cto-glass-nav {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  }
+
+  .nav-link {
+    position: relative;
+  }
+
+  /* Mobile menu animations */
+  .mobile-menu-open .mobile-menu-line-1 {
+    transform: rotate(45deg) translateY(6px);
+  }
+
+  .mobile-menu-open .mobile-menu-line-2 {
+    opacity: 0;
+  }
+
+  .mobile-menu-open .mobile-menu-line-3 {
+    transform: rotate(-45deg) translateY(-6px);
+  }
+
+  .mobile-menu-open #mobile-menu {
+    transform: translateX(0);
+  }
+
+  .mobile-menu-open #mobile-menu-overlay {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .mobile-menu-open .mobile-nav-link {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* Dark mode support */
+  @media (prefers-color-scheme: dark) {
+    .cto-glass-nav {
+      background: rgba(26, 26, 26, 0.95);
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    #mobile-menu {
+      background: #1a1a1a;
+    }
+  }
+
+  /* Scroll behavior enhancements */
+  .nav-scrolled {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(15px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .cto-glass-nav,
+    .nav-link,
+    .mobile-nav-link,
+    .mobile-menu-line-1,
+    .mobile-menu-line-2,
+    .mobile-menu-line-3,
+    #mobile-menu,
+    #mobile-menu-overlay {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  // Enhanced smooth scroll and navigation functionality
+  class NavigationController {
+    constructor() {
+      this.nav = document.querySelector('.cto-glass-nav');
+      this.mobileMenuButton = document.getElementById('mobile-menu-button');
+      this.mobileMenu = document.getElementById('mobile-menu');
+      this.mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
+      this.scrollLinks = document.querySelectorAll('[data-scroll-to]');
+      this.isMenuOpen = false;
+      
+      this.init();
+    }
+
+    init() {
+      this.setupScrollBehavior();
+      this.setupMobileMenu();
+      this.setupSmoothScroll();
+      this.setupScrollSpy();
+    }
+
+    setupScrollBehavior() {
+      let lastScrollY = window.scrollY;
+      let ticking = false;
+
+      const updateNavOnScroll = () => {
+        const currentScrollY = window.scrollY;
+        
+        // Add/remove scrolled class based on scroll position
+        if (currentScrollY > 50) {
+          this.nav.classList.add('nav-scrolled');
+        } else {
+          this.nav.classList.remove('nav-scrolled');
+        }
+
+        lastScrollY = currentScrollY;
+        ticking = false;
+      };
+
+      window.addEventListener('scroll', () => {
+        if (!ticking) {
+          requestAnimationFrame(updateNavOnScroll);
+          ticking = true;
+        }
+      });
+    }
+
+    setupMobileMenu() {
+      this.mobileMenuButton.addEventListener('click', () => {
+        this.toggleMobileMenu();
+      });
+
+      this.mobileMenuOverlay.addEventListener('click', () => {
+        this.closeMobileMenu();
+      });
+
+      // Close menu on escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && this.isMenuOpen) {
+          this.closeMobileMenu();
+        }
+      });
+    }
+
+    toggleMobileMenu() {
+      this.isMenuOpen = !this.isMenuOpen;
+      document.body.classList.toggle('mobile-menu-open', this.isMenuOpen);
+      
+      // Prevent body scroll when menu is open
+      document.body.style.overflow = this.isMenuOpen ? 'hidden' : '';
+      
+      // Update aria attributes
+      this.mobileMenuButton.setAttribute('aria-expanded', this.isMenuOpen.toString());
+    }
+
+    closeMobileMenu() {
+      this.isMenuOpen = false;
+      document.body.classList.remove('mobile-menu-open');
+      document.body.style.overflow = '';
+      this.mobileMenuButton.setAttribute('aria-expanded', 'false');
+    }
+
+    setupSmoothScroll() {
+      this.scrollLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const targetId = link.getAttribute('data-scroll-to');
+          const targetSection = document.querySelector(targetId);
+          
+          if (targetSection) {
+            const offsetTop = targetSection.offsetTop - 80; // Account for fixed nav
+            
+            window.scrollTo({
+              top: offsetTop,
+              behavior: 'smooth'
+            });
+
+            // Close mobile menu if open
+            if (this.isMenuOpen) {
+              this.closeMobileMenu();
+            }
+
+            // Update URL hash without jumping
+            if (history.pushState) {
+              history.pushState(null, null, targetId);
+            }
+          }
+        });
+      });
+    }
+
+    setupScrollSpy() {
+      const sections = document.querySelectorAll('section[id]');
+      const navLinks = document.querySelectorAll('[data-scroll-to]');
+
+      const observerOptions = {
+        rootMargin: '-100px 0px -50% 0px',
+        threshold: 0
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const id = entry.target.getAttribute('id');
+          const navLink = document.querySelector(`[data-scroll-to="#${id}"]`);
+          
+          if (entry.isIntersecting) {
+            // Remove active class from all nav links
+            navLinks.forEach(link => link.classList.remove('active'));
+            // Add active class to current section link
+            if (navLink) {
+              navLink.classList.add('active');
+            }
+          }
+        });
+      }, observerOptions);
+
+      sections.forEach(section => {
+        observer.observe(section);
+      });
+    }
+  }
+
+  // Initialize navigation when DOM is loaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      new NavigationController();
+    });
+  } else {
+    new NavigationController();
+  }
+</script>

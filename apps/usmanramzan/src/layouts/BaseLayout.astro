@@ -1,4 +1,10 @@
 ---
+/**
+ * Enhanced BaseLayout for CTO Portfolio
+ * Improved SEO, meta tags, and performance optimizations
+ * Integration with modern theme system and accessibility features
+ */
+
 import { getSEO, formatPageTitle, type SEOProps } from '~/lib/seo';
 import { getPersonSchema } from '~/lib/schema';
 
@@ -6,27 +12,97 @@ export interface Props extends Partial<SEOProps> {
   title: string;
   description: string;
   lang?: 'en' | 'ur';
+  ogImage?: string;
+  canonical?: string;
+  noindex?: boolean;
+  structuredData?: Record<string, any>;
 }
 
-const { title, description, lang = 'en', ...seoProps } = Astro.props;
+const { 
+  title, 
+  description, 
+  lang = 'en', 
+  ogImage,
+  canonical,
+  noindex = false,
+  structuredData,
+  ...seoProps 
+} = Astro.props;
 
+// Enhanced SEO configuration
 const seo = getSEO({
-  title: formatPageTitle(title, 'Usman Ramzan'),
+  title: formatPageTitle(title, 'Muhammad Usman Ramzan'),
   description,
-  url: Astro.url.href,
+  url: canonical || Astro.url.href,
+  image: ogImage || 'https://usmanramzan.ai/og-image.jpg',
   ...seoProps,
 });
 
+// Enhanced person schema with CTO focus
 const personSchema = getPersonSchema({
   name: 'Muhammad Usman Ramzan',
   url: 'https://www.usmanramzan.ai',
-  jobTitle: 'Senior DevOps Engineer | CTO',
-  affiliation: { '@type': 'Organization', name: 'Urnlabs' },
+  jobTitle: 'AI/ML Engineering CTO | DevOps Specialist',
+  affiliation: { '@type': 'Organization', name: 'Urnlabs', url: 'https://urnlabs.com' },
+  description: 'Senior AI/ML Engineering CTO specializing in production-ready AI agent platforms, ML infrastructure, and governance-first automation systems.',
+  knowsAbout: [
+    'Artificial Intelligence',
+    'Machine Learning Engineering',
+    'DevOps',
+    'Kubernetes',
+    'Cloud Architecture',
+    'AI Agent Systems',
+    'MLOps',
+    'System Architecture'
+  ],
   sameAs: [
     'https://www.linkedin.com/in/mramzan-pk',
     'https://github.com/mramzan-pk',
+    'https://twitter.com/mramzan_pk'
   ],
 });
+
+// Additional structured data
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ProfessionalService',
+  'name': 'Muhammad Usman Ramzan - AI/ML Engineering CTO',
+  'description': description,
+  'url': 'https://www.usmanramzan.ai',
+  'serviceType': 'AI/ML Consulting and Engineering',
+  'provider': personSchema,
+  'areaServed': 'Worldwide',
+  'hasOfferCatalog': {
+    '@type': 'OfferCatalog',
+    'name': 'AI/ML Engineering Services',
+    'itemListElement': [
+      {
+        '@type': 'Offer',
+        'itemOffered': {
+          '@type': 'Service',
+          'name': 'AI Architecture Consulting',
+          'description': 'Design and implementation of scalable AI systems and agent platforms'
+        }
+      },
+      {
+        '@type': 'Offer',
+        'itemOffered': {
+          '@type': 'Service',
+          'name': 'ML Engineering',
+          'description': 'Production-ready machine learning pipelines and MLOps implementation'
+        }
+      },
+      {
+        '@type': 'Offer',
+        'itemOffered': {
+          '@type': 'Service',
+          'name': 'DevOps Transformation',
+          'description': 'Cloud infrastructure, Kubernetes, and automated deployment solutions'
+        }
+      }
+    ]
+  }
+};
 ---
 
 <!doctype html>
@@ -35,40 +111,64 @@ const personSchema = getPersonSchema({
     <meta charset="UTF-8" />
     <meta name="description" content={seo.description} />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     
-    <!-- SEO -->
+    <!-- Enhanced SEO Meta Tags -->
     <title>{seo.title}</title>
-    <link rel="canonical" href={seo.canonical} />
+    <link rel="canonical" href={canonical || seo.canonical} />
+    <meta name="author" content="Muhammad Usman Ramzan" />
+    <meta name="keywords" content="AI CTO, ML Engineering, DevOps, Kubernetes, AI Agents, MLOps, Cloud Architecture, System Design" />
+    <meta name="theme-color" content="#fafafa" />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     
-    <!-- Open Graph -->
-    <meta property="og:type" content={seo.openGraph.basic.type} />
+    <!-- Favicon and App Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    
+    <!-- Enhanced Open Graph -->
+    <meta property="og:type" content="profile" />
     <meta property="og:title" content={seo.openGraph.basic.title} />
     <meta property="og:description" content={seo.openGraph.optional.description} />
     <meta property="og:url" content={seo.openGraph.basic.url} />
-    <meta property="og:image" content={seo.openGraph.basic.image} />
-    <meta property="og:site_name" content="Usman Ramzan" />
+    <meta property="og:image" content={ogImage || seo.openGraph.basic.image} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Muhammad Usman Ramzan - AI/ML Engineering CTO" />
+    <meta property="og:site_name" content="Muhammad Usman Ramzan" />
+    <meta property="og:locale" content={lang === 'ur' ? 'ur_PK' : 'en_US'} />
+    <meta property="profile:first_name" content="Muhammad Usman" />
+    <meta property="profile:last_name" content="Ramzan" />
     
-    <!-- Twitter -->
-    <meta name="twitter:card" content={seo.twitter.card} />
+    <!-- Enhanced Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@mramzan_pk" />
+    <meta name="twitter:creator" content="@mramzan_pk" />
     <meta name="twitter:title" content={seo.twitter.title} />
     <meta name="twitter:description" content={seo.twitter.description} />
-    <meta name="twitter:image" content={seo.twitter.image} />
+    <meta name="twitter:image" content={ogImage || seo.twitter.image} />
+    <meta name="twitter:image:alt" content="Muhammad Usman Ramzan - AI/ML Engineering CTO" />
     
-    <!-- Language alternates -->
+    <!-- Language and Regional -->
     <link rel="alternate" hreflang="en" href={Astro.url.href.replace('/ur/', '/')} />
     <link rel="alternate" hreflang="ur" href={Astro.url.href.includes('/ur/') ? Astro.url.href : Astro.url.href + 'ur/'} />
+    <link rel="alternate" hreflang="x-default" href={Astro.url.href.replace('/ur/', '/')} />
     
-    <!-- Fonts -->
+    <!-- Performance and Resource Hints -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://images.unsplash.com" />
+    <link rel="dns-prefetch" href="https://unpkg.com" />
+    
+    <!-- Enhanced Typography -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     
-    <!-- Urdu font -->
+    <!-- Urdu font support -->
     {lang === 'ur' && (
       <link
         href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap"
@@ -76,65 +176,400 @@ const personSchema = getPersonSchema({
       />
     )}
     
-    <!-- JSON-LD Schema -->
+    <!-- Enhanced Structured Data -->
     <script type="application/ld+json" set:html={JSON.stringify(personSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
+    {structuredData && (
+      <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+    )}
     
-    <!-- Security Headers -->
+    <!-- Enhanced Security Headers -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta http-equiv="X-Frame-Options" content="DENY" />
     <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
-  </head>
-  <body class={`bg-primary-bg text-text-light antialiased ${lang === 'ur' ? 'font-arabic' : ''}`}>
-    <slot />
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
     
-    <!-- Analytics -->
+    <!-- Critical CSS for enhanced loading performance -->
+    <style>
+      /* Critical above-the-fold styles */
+      html {
+        font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+        scroll-behavior: smooth;
+      }
+      
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+      
+      body {
+        margin: 0;
+        background: #fafafa;
+        color: #1a1a1a;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #111111;
+          color: #f5f5f5;
+        }
+      }
+      
+      /* Loading indicator */
+      .loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, transparent, #1a1a1a, transparent);
+        z-index: 9999;
+        animation: loading 2s infinite;
+      }
+      
+      @keyframes loading {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+    </style>
+  </head>
+  <body class={`bg-gray-50 text-gray-900 antialiased transition-colors duration-300 ${lang === 'ur' ? 'font-arabic' : ''}`} style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
+    <!-- Skip to content for accessibility -->
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-cto-text-primary text-cto-primary-bg px-4 py-2 rounded-md z-50 transition-all">
+      Skip to main content
+    </a>
+    
+    <!-- Loading indicator -->
+    <div class="loading" id="loading-indicator"></div>
+    
+    <!-- Main content wrapper -->
+    <div id="main-content">
+      <slot />
+    </div>
+    
+    <!-- Back to top button -->
+    <button
+      id="back-to-top"
+      class="fixed bottom-8 right-8 w-12 h-12 bg-cto-text-primary text-cto-primary-bg rounded-full shadow-lg opacity-0 pointer-events-none transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-cto-text-primary focus:ring-offset-2 z-40"
+      aria-label="Back to top"
+    >
+      <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+      </svg>
+    </button>
+    
+    <!-- Enhanced Analytics and Monitoring -->
     <script>
-      // Plausible analytics will be added here in production
+      // Performance monitoring
+      if ('PerformanceObserver' in window) {
+        // Monitor Core Web Vitals
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            if (entry.entryType === 'measure') {
+              console.log(`${entry.name}: ${entry.duration}ms`);
+            }
+          }
+        }).observe({ entryTypes: ['measure'] });
+        
+        // Monitor LCP
+        new PerformanceObserver((list) => {
+          const entries = list.getEntries();
+          const lastEntry = entries[entries.length - 1];
+          console.log('LCP:', lastEntry.startTime);
+        }).observe({ entryTypes: ['largest-contentful-paint'] });
+      }
+      
+      // Loading state management
+      class LoadingController {
+        constructor() {
+          this.loadingIndicator = document.getElementById('loading-indicator');
+          this.backToTopBtn = document.getElementById('back-to-top');
+          this.init();
+        }
+        
+        init() {
+          this.hideLoadingIndicator();
+          this.setupBackToTop();
+          this.setupErrorHandling();
+        }
+        
+        hideLoadingIndicator() {
+          if (this.loadingIndicator) {
+            setTimeout(() => {
+              this.loadingIndicator.style.display = 'none';
+            }, 1000);
+          }
+        }
+        
+        setupBackToTop() {
+          if (!this.backToTopBtn) return;
+          
+          // Show/hide based on scroll position
+          const toggleBackToTop = () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            if (scrollTop > 500) {
+              this.backToTopBtn.style.opacity = '1';
+              this.backToTopBtn.style.pointerEvents = 'auto';
+            } else {
+              this.backToTopBtn.style.opacity = '0';
+              this.backToTopBtn.style.pointerEvents = 'none';
+            }
+          };
+          
+          // Throttled scroll listener
+          let ticking = false;
+          window.addEventListener('scroll', () => {
+            if (!ticking) {
+              requestAnimationFrame(() => {
+                toggleBackToTop();
+                ticking = false;
+              });
+              ticking = true;
+            }
+          });
+          
+          // Click handler
+          this.backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+              top: 0,
+              behavior: 'smooth'
+            });
+          });
+        }
+        
+        setupErrorHandling() {
+          // Global error handling for better user experience
+          window.addEventListener('error', (event) => {
+            console.error('Global error:', event.error);
+            // Could send to analytics service
+          });
+          
+          window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+            // Could send to analytics service
+          });
+        }
+      }
+      
+      // Initialize when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+          new LoadingController();
+        });
+      } else {
+        new LoadingController();
+      }
+      
+      // Analytics placeholder - replace with actual service
+      // Example: Plausible, Google Analytics 4, or custom solution
+      /*
+      if (typeof plausible !== 'undefined') {
+        plausible('pageview');
+      }
+      */
     </script>
   </body>
 </html>
 
 <style is:global>
+  /* Enhanced Global Styles for CTO Portfolio */
+  
   html {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    scroll-behavior: smooth;
   }
   
   .font-arabic {
-    font-family: 'Noto Sans Arabic', 'Inter', system-ui, sans-serif;
+    font-family: 'Noto Sans Arabic', 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   }
   
-  code {
-    font-family: 'JetBrains Mono', monospace;
+  code, pre {
+    font-family: 'JetBrains Mono', 'Space Mono', monospace;
   }
   
-  /* Smooth scrolling */
+  /* Enhanced smooth scrolling */
   @media (prefers-reduced-motion: no-preference) {
     html {
       scroll-behavior: smooth;
     }
+    
+    * {
+      scroll-behavior: inherit;
+    }
   }
   
-  /* RTL support */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+  
+  /* Enhanced RTL support */
   [dir="rtl"] {
     text-align: right;
   }
   
-  /* Custom scrollbar */
+  [dir="rtl"] .cto-btn-link,
+  [dir="rtl"] .nav-link {
+    flex-direction: row-reverse;
+  }
+  
+  /* Enhanced custom scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
+    height: 6px;
   }
   
   ::-webkit-scrollbar-track {
-    background: #1a1a1a;
+    background: rgba(26, 26, 26, 0.1);
+    border-radius: 3px;
   }
   
   ::-webkit-scrollbar-thumb {
-    background: #0072ff;
-    border-radius: 4px;
+    background: rgba(26, 26, 26, 0.3);
+    border-radius: 3px;
+    transition: background 0.3s ease;
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    background: #0056cc;
+    background: rgba(26, 26, 26, 0.5);
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+  }
+  
+  /* Enhanced focus styles for accessibility */
+  :focus-visible {
+    outline: 2px solid rgba(26, 26, 26, 0.8);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    :focus-visible {
+      outline-color: rgba(245, 245, 245, 0.8);
+    }
+  }
+  
+  /* Screen reader only content */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  
+  .focus\:not-sr-only:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: inherit;
+    margin: inherit;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+  
+  /* Enhanced selection styles */
+  ::selection {
+    background: rgba(26, 26, 26, 0.15);
+    color: inherit;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    ::selection {
+      background: rgba(245, 245, 245, 0.15);
+    }
+  }
+  
+  /* Print styles */
+  @media print {
+    * {
+      background: white !important;
+      color: black !important;
+      box-shadow: none !important;
+    }
+    
+    .cto-glass-nav,
+    #back-to-top,
+    .loading {
+      display: none !important;
+    }
+    
+    body {
+      font-size: 12pt;
+      line-height: 1.4;
+    }
+    
+    h1, h2, h3 {
+      page-break-after: avoid;
+    }
+  }
+  
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .cto-glass-card {
+      border-width: 2px !important;
+      border-color: currentColor !important;
+    }
+    
+    .cto-btn-primary,
+    .cto-btn-secondary {
+      border: 2px solid currentColor !important;
+    }
+  }
+  
+  /* Enhanced loading states */
+  [data-loading="true"] {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  
+  /* Optimized rendering */
+  .cto-animate-hardware {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+  
+  /* Enhanced typography scale */
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Container queries support */
+  @supports (container-type: inline-size) {
+    .portfolio-container {
+      container-type: inline-size;
+    }
   }
 </style>
