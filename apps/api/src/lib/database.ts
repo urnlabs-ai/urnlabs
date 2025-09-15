@@ -94,7 +94,8 @@ export async function databaseHealth(): Promise<{ ready: boolean; details: DbHea
   if (schema.schema) {
     details.schema = schema.schema;
   }
-  return { ready: conn.ok, details };
+  const ready = Boolean(conn.ok && schema.ok);
+  return { ready, details };
 }
 
 function maskConnectionString(url: string): string {

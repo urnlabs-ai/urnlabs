@@ -1,4 +1,11 @@
 services:
+  # NOTE:
+  # - This compose runs Node.js services only (API, Agents, Bridge).
+  # - It expects external Postgres/Redis available on the host machine.
+  #   Default env points to host.docker.internal. Override via env if needed:
+  #     export DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev
+  #     export REDIS_URL=redis://host.docker.internal:6379
+  # - For a full local stack including Postgres/Redis, use docker-compose-local.yml instead.
   # API Service (when running in Docker)
   api:
     build:
@@ -8,10 +15,11 @@ services:
     container_name: urnlabs-api
     ports:
       - "3000:3000"
-    command: ["sh", "-lc", "pnpm install --no-frozen-lockfile && pnpm exec prisma generate && (pnpm exec prisma migrate deploy || pnpm exec prisma db push || true) && pnpm dev"]
+    command: ["sh", "-lc", "pnpm install --no-frozen-lockfile && pnpm exec prisma generate && pnpm dev"]
     environment:
       - NODE_ENV=development
       - CI=true
+      - HOST=0.0.0.0
       - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev}
       - REDIS_URL=${REDIS_URL:-redis://host.docker.internal:6379}
       - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-minimum-32-characters-long}
@@ -27,7 +35,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"fetch(process.env.HEALTHCHECK_URL||'http://localhost:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\" "]
+      test: ["CMD-SHELL", "curl -sf ${HEALTHCHECK_URL:-http://localhost:3000/health/ready} >/dev/null || exit 1"]
       interval: 5s
       timeout: 7s
       retries: 18
@@ -49,6 +57,7 @@ services:
     environment:
       - NODE_ENV=development
       - CI=true
+      - HOST=0.0.0.0
       - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev}
       - REDIS_URL=${REDIS_URL:-redis://host.docker.internal:6379}
       - CLAUDE_API_KEY=${CLAUDE_API_KEY}
@@ -66,7 +75,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"fetch(process.env.HEALTHCHECK_URL||'http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\" "]
+      test: ["CMD-SHELL", "curl -sf ${HEALTHCHECK_URL:-http://localhost:3001/health} >/dev/null || exit 1"]
       interval: 5s
       timeout: 7s
       retries: 18
@@ -89,6 +98,7 @@ services:
     environment:
       - NODE_ENV=development
       - CI=true
+      - HOST=0.0.0.0
       - BRIDGE_PORT=3002
       - API_ENDPOINT=http://api:3000
       - AGENTS_ENDPOINT=http://agents:3001
@@ -108,7 +118,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"fetch(process.env.HEALTHCHECK_URL||'http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\" "]
+      test: ["CMD-SHELL", "curl -sf ${HEALTHCHECK_URL:-http://localhost:3002/health} >/dev/null || exit 1"]
       interval: 5s
       timeout: 7s
       retries: 18

@@ -12,6 +12,7 @@ import { errorHandler } from '@/middleware/error-handler.js';
 import { authMiddleware } from '@/middleware/auth.js';
 import { requestLogger } from '@/middleware/request-logger.js';
 import { healthRoutes } from '@/routes/health.js';
+import { execSync } from 'node:child_process';
 import { getPrisma, disconnectPrisma, connectWithRetry } from '@/lib/database.js';
 import { authRoutes } from '@/routes/auth.js';
 import { usersRoutes } from '@/routes/users.js';
@@ -152,6 +153,13 @@ async function start() {
     const attempts = Number(process.env.DEPENDENCY_RETRY_MAX_ATTEMPTS ?? 20);
     const delay = Number(process.env.DEPENDENCY_RETRY_DELAY_MS ?? 2000);
     await connectWithRetry({ attempts, delayMs: delay });
+
+    // After DB is reachable, apply schema migrations
+    try {
+      execSync('pnpm exec prisma migrate deploy', { stdio: 'inherit' });
+    } catch (e) {
+      execSync('pnpm exec prisma db push', { stdio: 'inherit' });
+    }
     
     // Use API_PORT environment variable if provided, otherwise fall back to config.PORT
     const port = process.env.API_PORT ? parseInt(process.env.API_PORT, 10) : config.PORT;

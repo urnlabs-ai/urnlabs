@@ -1,4 +1,9 @@
 services:
+  # NOTE:
+  # - This compose brings up a full local stack including Postgres/Redis and all services.
+  # - Services discover DB/Redis via service names (postgres, redis) on the same network.
+  # - Prefer this file for an end-to-end local environment. For Node.js-only services using
+  #   host-level Postgres/Redis, see docker-compose-nodejs.yml.
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
@@ -47,6 +52,7 @@ services:
       - "7000:7000"  # Main entry point for all traffic
     environment:
       - NODE_ENV=development
+      - HOST=0.0.0.0
       - GATEWAY_PORT=7000
       - API_ENDPOINT=http://api:7001
       - AGENTS_ENDPOINT=http://agents:7002
@@ -85,6 +91,7 @@ services:
       - "7001:7001"
     environment:
       - NODE_ENV=development
+      - HOST=0.0.0.0
       - API_PORT=7001
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_dev
       - REDIS_URL=redis://redis:6379
@@ -118,6 +125,7 @@ services:
       - "7002:7002"
     environment:
       - NODE_ENV=development
+      - HOST=0.0.0.0
       - AGENT_SERVICE_PORT=7002
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_dev
       - REDIS_URL=redis://redis:6379
@@ -153,6 +161,7 @@ services:
       - "7003:7003"
     environment:
       - NODE_ENV=development
+      - HOST=0.0.0.0
       - BRIDGE_PORT=7003
       - API_ENDPOINT=http://api:7001
       - AGENTS_ENDPOINT=http://agents:7002
@@ -252,6 +261,7 @@ services:
       - "7016:7016"  # MCP server
     environment:
       - NODE_ENV=development
+      - HOST=0.0.0.0
       - MONITORING_PORT=7006
       - MONITORING_MCP_PORT=7016
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_dev
@@ -290,6 +300,7 @@ services:
       - "7007:7007"  # MCP integration service
     environment:
       - NODE_ENV=development
+      - HOST=0.0.0.0
       - MCP_SERVICE_PORT=7007
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_dev
       - REDIS_URL=redis://redis:6379
@@ -324,6 +335,7 @@ services:
       - "7008:7008"  # Testing service
     environment:
       - NODE_ENV=test
+      - HOST=0.0.0.0
       - TESTING_PORT=7008
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_test
       - REDIS_URL=redis://redis:6379
@@ -359,6 +371,7 @@ services:
       - "7009:7009"  # Security service
     environment:
       - NODE_ENV=development
+      - HOST=0.0.0.0
       - SECURITY_PORT=7009
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_dev
       - REDIS_URL=redis://redis:6379

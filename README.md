@@ -97,6 +97,7 @@ Notes:
 - Compose uses `host.docker.internal` to reach host Postgres/Redis. On Linux we map this via `extra_hosts`.
 - Override connection strings via env: `export DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev` and `export REDIS_URL=redis://host.docker.internal:6379`.
 - Readiness endpoint: API exposes `/health/ready` used by Compose health checks.
+- Services bind to all interfaces inside containers by default (`HOST=0.0.0.0`).
 
 ### Option 2: Traditional Development
 

@@ -2,22 +2,33 @@
 FROM node:20-alpine AS base
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm via corepack and add build tools for native modules
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate \
+  && apk add --no-cache python3 make g++ curl
 
-# Copy package files
+# Copy workspace manifests first for better caching
+COPY pnpm-workspace.yaml ./
 COPY package.json pnpm-lock.yaml* ./
+COPY tsconfig.json ./
 COPY apps/api/package.json ./apps/api/
-COPY packages/ ./packages/
+COPY packages ./packages
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install all workspace dependencies recursively
+RUN pnpm install --frozen-lockfile --recursive
+
+# Build workspace packages (e.g., @urnlabs/ai-agents)
+RUN pnpm -r --filter "./packages/**" build
 
 # Development stage
 FROM base AS dev
 WORKDIR /app/apps/api
 # Make sure the dev script can find tsx from the root node_modules
 ENV PATH=/app/node_modules/.bin:$PATH
+RUN which tsx || echo "tsx not found in PATH"
+# Include source files so dev runs without bind-mount
+COPY apps/api/src ./src
+COPY apps/api/tsconfig.json ./
+COPY apps/api/prisma ./prisma
 CMD ["pnpm", "dev"]
 
 # Build stage
@@ -30,7 +41,7 @@ COPY apps/api/tsconfig.json ./
 COPY apps/api/prisma ./prisma
 
 # Generate Prisma client
-RUN npx prisma generate
+RUN pnpm exec prisma generate
 
 # Build the application
 RUN pnpm build
@@ -39,15 +50,19 @@ RUN pnpm build
 FROM node:20-alpine AS production
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm via corepack
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
-# Copy package files
+# Copy workspace manifests and prebuilt packages from base
 COPY package.json pnpm-lock.yaml* ./
-COPY apps/api/package.json ./
+COPY pnpm-workspace.yaml ./
+COPY --from=base /app/packages ./packages
+# Ensure app workspace folder exists and copy its package.json
+RUN mkdir -p apps/api
+COPY apps/api/package.json ./apps/api/
 
-# Install production dependencies only
-RUN pnpm install --prod --frozen-lockfile
+# Install production dependencies for the app and packages only
+RUN pnpm -r --filter "@urnlabs/api" --filter "./packages/**" install --prod --frozen-lockfile
 
 # Copy built application and Prisma
 COPY --from=builder /app/apps/api/dist ./dist

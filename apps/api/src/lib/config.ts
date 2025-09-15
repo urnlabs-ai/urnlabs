@@ -3,11 +3,24 @@ import { z } from 'zod';
 const envSchema = z.object({
   // Server configuration
   NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
-  PORT: z.coerce.number().default(process.env.API_PORT ? parseInt(process.env.API_PORT) : 3000),
-  HOST: z.string().default('localhost'),
+  PORT: z.preprocess(
+    () => process.env.PORT || process.env.API_PORT,
+    z.coerce.number().default(3000)
+  ),
+  HOST: z.preprocess(
+    () => process.env.HOST ?? (process.env.NODE_ENV === 'development' ? '0.0.0.0' : 'localhost'),
+    z.string()
+  ),
   
   // Database
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.string().refine(val => {
+    try {
+      new URL(val);
+      return true;
+    } catch {
+      return false;
+    }
+  }, { message: 'Invalid database URL' }),
   DATABASE_POOL_SIZE: z.coerce.number().default(10),
   
   // Authentication
@@ -16,7 +29,9 @@ const envSchema = z.object({
   BCRYPT_SALT_ROUNDS: z.coerce.number().default(12),
   
   // CORS
-  CORS_ORIGINS: z.string().transform(val => val.split(',')).default('http://localhost:4321,http://localhost:3000'),
+  CORS_ORIGINS: z.string()
+    .default('http://localhost:4321,http://localhost:3000')
+    .transform(val => val.split(',').map(s => s.trim()).filter(Boolean)),
   
   // Rate limiting
   RATE_LIMIT_MAX: z.coerce.number().default(100),
@@ -30,6 +45,10 @@ const envSchema = z.object({
   // Monitoring
   MONITORING_API_KEY: z.string().optional(),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  READINESS_REQUIRE_SCHEMA: z.preprocess(
+    () => process.env.READINESS_REQUIRE_SCHEMA ?? (process.env.NODE_ENV === 'development' ? 'true' : 'false'),
+    z.coerce.boolean()
+  ),
   
   // AI Agent configuration
   CLAUDE_API_KEY: z.string().optional(),
@@ -37,7 +56,14 @@ const envSchema = z.object({
   AGENT_QUEUE_CONCURRENCY: z.coerce.number().default(5),
   
   // Redis (for caching and queues)
-  REDIS_URL: z.string().url().optional(),
+  REDIS_URL: z.string().refine(val => {
+    try {
+      new URL(val);
+      return true;
+    } catch {
+      return false;
+    }
+  }, { message: 'Invalid Redis URL' }).optional(),
   
   // Email service
   SMTP_HOST: z.string().optional(),
@@ -57,12 +83,10 @@ function validateEnv() {
     return envSchema.parse(process.env);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const missingVars = error.errors
-        .filter(err => err.code === 'invalid_type')
-        .map(err => err.path.join('.'));
-      
       console.error('❌ Environment validation failed:');
-      console.error('Missing required environment variables:', missingVars);
+      error.errors.forEach(err => {
+        console.error(`- ${err.path.join('.')}: ${err.message} (${err.code})`);
+      });
       console.error('\n📋 Required variables:');
       console.error('- DATABASE_URL: PostgreSQL connection string');
       console.error('- JWT_SECRET: Secret key for JWT tokens (minimum 32 characters)');
@@ -71,7 +95,7 @@ function validateEnv() {
       console.error('- SLACK_BOT_TOKEN: For Slack notifications');
       console.error('- CLAUDE_API_KEY: For Claude AI integration');
       console.error('- REDIS_URL: For caching and queues');
-      
+
       process.exit(1);
     }
     throw error;

@@ -2,22 +2,32 @@
 FROM node:20-alpine AS base
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm via corepack and add build tools for native modules
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate \
+  && apk add --no-cache python3 make g++ curl
 
-# Copy package files
+# Copy workspace manifests first for better caching
+COPY pnpm-workspace.yaml ./
 COPY package.json pnpm-lock.yaml* ./
+COPY tsconfig.json ./
 COPY apps/bridge/package.json ./apps/bridge/
-COPY packages/ ./packages/
+COPY packages ./packages
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install all workspace dependencies recursively
+RUN pnpm install --frozen-lockfile --recursive
+
+# Build workspace packages
+RUN pnpm -r --filter "./packages/**" build
 
 # Development stage
 FROM base AS dev
 WORKDIR /app/apps/bridge
 # Make sure the dev script can find tsx from the root node_modules
 ENV PATH=/app/node_modules/.bin:$PATH
+RUN which tsx || echo "tsx not found in PATH"
+# Include source files so dev runs without bind-mount
+COPY apps/bridge/src ./src
+COPY apps/bridge/tsconfig.json ./
 CMD ["pnpm", "dev"]
 
 # Build stage
@@ -35,15 +45,19 @@ RUN pnpm build
 FROM node:20-alpine AS production
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm via corepack
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
-# Copy package files
+# Copy workspace manifests and prebuilt packages from base
 COPY package.json pnpm-lock.yaml* ./
-COPY apps/bridge/package.json ./
+COPY pnpm-workspace.yaml ./
+COPY --from=base /app/packages ./packages
+# Ensure app workspace folder exists and copy its package.json
+RUN mkdir -p apps/bridge
+COPY apps/bridge/package.json ./apps/bridge/
 
-# Install production dependencies only
-RUN pnpm install --prod --frozen-lockfile
+# Install production dependencies for the app and packages only
+RUN pnpm -r --filter "@urnlabs/bridge" --filter "./packages/**" install --prod --frozen-lockfile
 
 # Copy built application
 COPY --from=builder /app/apps/bridge/dist ./dist
