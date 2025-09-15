@@ -9,6 +9,7 @@ This is a **production monorepo** containing:
 ### Core Services
 - **`apps/api`** - Backend API service (Authentication, Data, Integrations)
 - **`apps/agents`** - AI Agent orchestration service (Claude, OpenAI, Workflow execution)
+  - See: `apps/agents/README.md`
 - **`apps/dashboard`** - Admin dashboard interface (React-based management UI)
 - **`apps/gateway`** - API Gateway service (Single entry point for all traffic)
 - **`apps/bridge`** - Go-Node.js bridge service (Integration layer)
@@ -19,6 +20,7 @@ This is a **production monorepo** containing:
 - **`packages/auth`** - Authentication services (JWT, RBAC, Multi-tenant)
 - **`packages/monitoring`** - Performance monitoring and analytics
 - **`packages/ai-agents`** - AI agent utilities and Claude Code integration
+  - See: `packages/ai-agents/README.md`
 - **`packages/mcp-integration`** - MCP server integration
 - **`packages/testing`** - Testing and QA services
 - **`packages/security`** - Security and compliance
@@ -81,6 +83,21 @@ docker-compose -f docker-compose-local.yml ps
 
 For detailed setup instructions, see [DOCKER-COMPOSE-LOCAL.md](./DOCKER-COMPOSE-LOCAL.md).
 
+### Option 1b: Node.js Stack Only (API + Agents + Bridge)
+
+Run only the Node.js services while using external PostgreSQL and Redis (on host). Includes health checks, dependency gating, and faster rebuilds.
+
+- Provision dependencies: `bash scripts/setup-dependencies.sh` (or run your own Postgres/Redis on host)
+- Verify connectivity: `bash scripts/test-connections.sh`
+- Start stack: `docker compose -f docker-compose-nodejs.yml up -d`
+- Monitor health: `bash scripts/monitor-health-checks.sh`
+- Debug failures: `bash scripts/debug-api-health.sh` or `bash scripts/fix-container-health.sh`
+
+Notes:
+- Compose uses `host.docker.internal` to reach host Postgres/Redis. On Linux we map this via `extra_hosts`.
+- Override connection strings via env: `export DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev` and `export REDIS_URL=redis://host.docker.internal:6379`.
+- Readiness endpoint: API exposes `/health/ready` used by Compose health checks.
+
 ### Option 2: Traditional Development
 
 ```bash
@@ -133,6 +150,12 @@ docker-compose -f docker-compose-local.yml up -d
 # Agents: http://localhost:7002
 # Dashboard: http://localhost:7004
 # Websites: http://localhost:80
+
+# Node.js-only stack (API + Agents + Bridge)
+docker compose -f docker-compose-nodejs.yml up -d
+docker compose -f docker-compose-nodejs.yml ps
+bash scripts/monitor-health-checks.sh
+```
 ```
 
 #### Traditional Development
@@ -337,6 +360,7 @@ urnlabs/
 │   └── config/                      # Shared configurations
 ├── docker/                         # Docker configuration files
 ├── docker-compose-local.yml         # Unified Docker Compose configuration
+├── docker-compose-nodejs.yml        # API + Agents + Bridge (external DB/Redis)
 └── DOCKER-COMPOSE-LOCAL.md          # Detailed setup instructions
 ```
 

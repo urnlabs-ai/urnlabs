@@ -5,7 +5,6 @@ import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import jwt from '@fastify/jwt';
-import { PrismaClient } from '@prisma/client';
 
 import { config } from '@/lib/config.js';
 import { logger } from '@/lib/logger.js';
@@ -13,6 +12,7 @@ import { errorHandler } from '@/middleware/error-handler.js';
 import { authMiddleware } from '@/middleware/auth.js';
 import { requestLogger } from '@/middleware/request-logger.js';
 import { healthRoutes } from '@/routes/health.js';
+import { getPrisma, disconnectPrisma, connectWithRetry } from '@/lib/database.js';
 import { authRoutes } from '@/routes/auth.js';
 import { usersRoutes } from '@/routes/users.js';
 import { agentsRoutes } from '@/routes/agents.js';
@@ -21,7 +21,7 @@ import { analyticsRoutes } from '@/routes/analytics.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
-    prisma: PrismaClient;
+    prisma: ReturnType<typeof getPrisma> extends infer T ? (T extends object ? T : any) : any;
   }
 }
 
@@ -33,16 +33,13 @@ async function buildServer(): Promise<FastifyInstance> {
     genReqId: () => crypto.randomUUID(),
   });
 
-  // Database connection
-  const prisma = new PrismaClient({
-    log: config.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
-  });
-
-  server.decorate('prisma', prisma);
+  // Database connection (singleton)
+  const prisma = getPrisma();
+  server.decorate('prisma', prisma as any);
 
   // Graceful shutdown
   server.addHook('onClose', async () => {
-    await prisma.$disconnect();
+    await disconnectPrisma();
   });
 
   // Security middleware
@@ -150,6 +147,11 @@ async function buildServer(): Promise<FastifyInstance> {
 async function start() {
   try {
     const server = await buildServer();
+
+    // Gate startup on database readiness with retries
+    const attempts = Number(process.env.DEPENDENCY_RETRY_MAX_ATTEMPTS ?? 20);
+    const delay = Number(process.env.DEPENDENCY_RETRY_DELAY_MS ?? 2000);
+    await connectWithRetry({ attempts, delayMs: delay });
     
     // Use API_PORT environment variable if provided, otherwise fall back to config.PORT
     const port = process.env.API_PORT ? parseInt(process.env.API_PORT, 10) : config.PORT;

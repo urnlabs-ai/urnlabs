@@ -8,11 +8,30 @@ services:
     container_name: urnlabs-api
     ports:
       - "3000:3000"
+    command: ["sh", "-lc", "pnpm install --no-frozen-lockfile && pnpm exec prisma generate && (pnpm exec prisma migrate deploy || pnpm exec prisma db push || true) && pnpm dev"]
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev
-      - REDIS_URL=redis://host.docker.internal:6379
-      - JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
+      - CI=true
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev}
+      - REDIS_URL=${REDIS_URL:-redis://host.docker.internal:6379}
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-minimum-32-characters-long}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
+      - HEALTHCHECK_URL=${HEALTHCHECK_URL:-http://localhost:3000/health/ready}
+      - DEPENDENCY_RETRY_MAX_ATTEMPTS=${DEPENDENCY_RETRY_MAX_ATTEMPTS:-20}
+      - DEPENDENCY_RETRY_DELAY_MS=${DEPENDENCY_RETRY_DELAY_MS:-2000}
+    restart: unless-stopped
+    init: true
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch(process.env.HEALTHCHECK_URL||'http://localhost:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\" "]
+      interval: 5s
+      timeout: 7s
+      retries: 18
+      start_period: 90s
     volumes:
       - .:/app
       - /app/node_modules
@@ -26,12 +45,32 @@ services:
     container_name: urnlabs-agents
     ports:
       - "3001:3001"
+    command: ["sh", "-lc", "pnpm install --no-frozen-lockfile && pnpm exec prisma generate || true && pnpm dev"]
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev
-      - REDIS_URL=redis://host.docker.internal:6379
+      - CI=true
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev}
+      - REDIS_URL=${REDIS_URL:-redis://host.docker.internal:6379}
       - CLAUDE_API_KEY=${CLAUDE_API_KEY}
       - AGENT_SERVICE_PORT=3001
+      - HEALTHCHECK_URL=${AGENTS_HEALTHCHECK_URL:-http://localhost:3001/health}
+      - DEPENDENCY_RETRY_MAX_ATTEMPTS=${DEPENDENCY_RETRY_MAX_ATTEMPTS:-20}
+      - DEPENDENCY_RETRY_DELAY_MS=${DEPENDENCY_RETRY_DELAY_MS:-2000}
+    restart: unless-stopped
+    init: true
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    depends_on:
+      api:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch(process.env.HEALTHCHECK_URL||'http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\" "]
+      interval: 5s
+      timeout: 7s
+      retries: 18
+      start_period: 90s
     volumes:
       - .:/app
       - /app/node_modules
@@ -46,15 +85,34 @@ services:
     container_name: urnlabs-bridge
     ports:
       - "3004:3002"
+    command: ["sh", "-lc", "pnpm install --no-frozen-lockfile && pnpm dev"]
     environment:
       - NODE_ENV=development
+      - CI=true
       - BRIDGE_PORT=3002
       - API_ENDPOINT=http://api:3000
       - AGENTS_ENDPOINT=http://agents:3001
-      - REDIS_URL=redis://host.docker.internal:6379
+      - REDIS_URL=${REDIS_URL:-redis://host.docker.internal:6379}
+      - HEALTHCHECK_URL=${BRIDGE_HEALTHCHECK_URL:-http://localhost:3002/health}
+      - DEPENDENCY_RETRY_MAX_ATTEMPTS=${DEPENDENCY_RETRY_MAX_ATTEMPTS:-20}
+      - DEPENDENCY_RETRY_DELAY_MS=${DEPENDENCY_RETRY_DELAY_MS:-2000}
+    restart: unless-stopped
+    init: true
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
     depends_on:
-      - api
-      - agents
+      api:
+        condition: service_healthy
+      agents:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch(process.env.HEALTHCHECK_URL||'http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\" "]
+      interval: 5s
+      timeout: 7s
+      retries: 18
+      start_period: 90s
     volumes:
       - shared_data:/shared
 

@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { z } from 'zod';
+import { testConnection, databaseHealth } from '@/lib/database.js';
 
 interface HealthStatus {
   status: 'healthy' | 'unhealthy' | 'degraded';
@@ -89,25 +90,13 @@ export async function healthRoutes(
       },
     };
 
-    // Check database connectivity
-    try {
-      const dbStart = Date.now();
-      await request.server.prisma.$queryRaw`SELECT 1`;
-      const dbResponseTime = Date.now() - dbStart;
-      
-      health.checks.database = {
-        status: 'healthy',
-        responseTime: dbResponseTime,
-      };
-      
-      if (dbResponseTime > 1000) {
-        health.status = 'degraded';
-      }
-    } catch (error) {
-      health.checks.database = {
-        status: 'unhealthy',
-        error: error instanceof Error ? error.message : 'Unknown database error',
-      };
+    // Check database connectivity and schema via shared db module
+    const db = await databaseHealth();
+    if (db.ready && db.details.latencyMs !== undefined) {
+      health.checks.database = { status: 'healthy', responseTime: db.details.latencyMs } as any;
+      if (db.details.latencyMs > 1000) health.status = 'degraded';
+    } else {
+      health.checks.database = { status: 'unhealthy', error: db.details.error } as any;
       health.status = 'unhealthy';
     }
 
@@ -224,22 +213,20 @@ export async function healthRoutes(
       summary: 'Readiness probe',
       description: 'Kubernetes readiness probe endpoint',
     },
-  }, async (request, reply) => {
-    try {
-      // Check if server is ready to accept traffic
-      await request.server.prisma.$queryRaw`SELECT 1`;
-      
+  }, async (_request, reply) => {
+    const res = await testConnection();
+    if (res.ok) {
       return reply.send({
         status: 'ready',
         timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      return reply.status(503).send({
-        status: 'not ready',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString(),
+        latencyMs: res.latencyMs,
       });
     }
+    return reply.status(503).send({
+      status: 'not ready',
+      error: res.error,
+      timestamp: new Date().toISOString(),
+    });
   });
 
   // Liveness probe (for Kubernetes)
