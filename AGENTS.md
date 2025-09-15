@@ -57,6 +57,10 @@
   - Monitor: `bash scripts/monitor-health-checks.sh`
   - Troubleshoot: `bash scripts/debug-api-health.sh`
 
+## Current State
+- The historical `urn-maestro` service is not implemented in this repository and is disabled in local Compose files. Any `MAESTRO_ENDPOINT` references are commented out. See `DOCKER-SERVICES.md` for re‑enable guidance.
+- Agents, API, Bridge, and Gateway are the active runtime services for local development.
+
 ## Environment Variables
 - Common: `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET` (API), `CLAUDE_API_KEY` (optional), `OPENAI_API_KEY` (optional)
 - Agents: `AGENT_SERVICE_PORT` (default 3001), `NODE_ENV`, `LOG_LEVEL`

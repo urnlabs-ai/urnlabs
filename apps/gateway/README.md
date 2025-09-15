@@ -1,7 +1,7 @@
 Gateway Service
 
 Overview
-- Central entry point that proxies to internal services (API, Agents, Bridge, Maestro, etc.).
+- Central entry point that proxies to internal services (API, Agents, Bridge, etc.).
 - Adds health gating, request tracing, and standardized headers.
 
 Key Env Vars
@@ -35,4 +35,4 @@ curl -s http://localhost:7000/agents/workflows/<workflowRunId>/status | jq
 Notes
 - Health checks are performed by the gateway; if upstream is unhealthy, the gateway can return 503.
 - For direct access (bypassing gateway), call the Agents service at its port (e.g., `http://localhost:7002/agents/status`).
-
+- The `urn-maestro` service is currently disabled/not implemented in this repo; related endpoints are not available.

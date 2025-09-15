@@ -41,4 +41,4 @@ Environment
 Notes
 - The Agents service (`apps/agents`) consumes this library for runtime orchestration.
 - For DB-backed state, use the API/Agents services; the library itself is stateless.
-
+ - Current state: No dependency on any Go-based `urn-maestro` runtime; that service is disabled in local Compose. This library remains usable independently or via `apps/agents`.

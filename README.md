@@ -25,6 +25,10 @@ This is a **production monorepo** containing:
 - **`packages/testing`** - Testing and QA services
 - **`packages/security`** - Security and compliance
 
+### Current State Notes
+- The `urn-maestro` Go service is not implemented in this repository and is disabled in local Compose files. Any historical references are commented out. See `DOCKER-SERVICES.md` for details and re‑enable guidance.
+- Prefer the Node.js stack for local development: API, Agents, Bridge, and Gateway are fully functional with Postgres/Redis.
+
 ### Claude Code Integration
 - **`.claude/`** - Advanced slash commands and MCP server configurations
 - **`CLAUDE.md`** - Production development guidelines and agent workflows
@@ -98,6 +102,7 @@ Notes:
 - Override connection strings via env: `export DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/urnlabs_dev` and `export REDIS_URL=redis://host.docker.internal:6379`.
 - Readiness endpoint: API exposes `/health/ready` used by Compose health checks.
 - Services bind to all interfaces inside containers by default (`HOST=0.0.0.0`).
+- The legacy `MAESTRO_ENDPOINT` is not required; `urn-maestro` service is disabled.
 
 ### Option 2: Traditional Development
 
@@ -178,6 +183,7 @@ pnpm dev:website  # Marketing site (localhost:4321)
 - **WebSocket Monitoring**: ws://localhost:7000/ws (via Gateway) or ws://localhost:7002/ws (direct)
 - **Admin Dashboard**: http://localhost:7004
 - **Marketing Website**: http://localhost:80/urnlabs/ (via Nginx) or http://localhost:8002 (direct)
+- Note: `urn-maestro` endpoints are currently unavailable; the service is disabled.
 
 ## 🤖 AI Agent System
 

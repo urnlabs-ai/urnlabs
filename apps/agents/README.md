@@ -3,6 +3,7 @@ AI Agents Service
 Overview
 - Orchestrates AI agents and workflows with queues, Prisma-backed state, and WebSocket updates.
 - Exposes REST endpoints for health, agent status, and workflow execution.
+ - No dependency on `urn-maestro`; that service is currently disabled/not implemented in this repo.
 
 Run Options
 - Local stack (includes DB/Redis): `docker compose -f ../../docker-compose-local.yml up -d`
@@ -16,11 +17,13 @@ Environment
 - `REDIS_URL`: Redis connection (e.g., redis://host.docker.internal:6379)
 - `AGENT_SERVICE_PORT`: Default 3001
 - Optional: `CLAUDE_API_KEY`, `OPENAI_API_KEY`
+ - Binding: `HOST=0.0.0.0` (default) for containerized networking
 
 Endpoints
 - Health: `GET /health`, `GET /health/detailed`
 - Agents: `GET /agents/status`, `GET /agents/tasks`
 - Workflows: `POST /workflows/execute`, `GET /workflows/:workflowRunId/status`, `POST /workflows/:workflowRunId/cancel`
+ - Through Gateway: prefix requests with `/agents` twice (gateway proxies `/agents` to Agents service which already prefixes routes with `/agents`), e.g. `GET /agents/agents/status`.
 
 Development
 - Install: `pnpm install`
@@ -33,4 +36,4 @@ Troubleshooting
 - Verify DB/Redis reachability from container using `scripts/test-connections.sh`.
 - If starting via Node.js stack compose, ensure `DATABASE_URL`/`REDIS_URL` point to host services or use the full local compose with embedded dependencies.
 - See `TROUBLESHOOTING-DOCKER.md` for debugging Prisma and health checks.
-
+ - For full service architecture and disabled services note, see `DOCKER-SERVICES.md`.
