@@ -1,5 +1,8 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { logSecurityEvent } from '@/lib/logger.js';
+import { createJWTService } from '@/services/jwt-service.js';
+import { AuthorizationService } from '@/services/authorization-service.js';
+import type { PermissionCheckRequest, AuthorizationContext } from '@/services/authorization-service.js';
 
 interface JWTPayload {
   userId: string;
@@ -13,7 +16,9 @@ interface JWTPayload {
 
 declare module 'fastify' {
   interface FastifyRequest {
-    user?: JWTPayload;
+    jwtUser?: JWTPayload;
+    authContext?: AuthorizationContext;
+    checkPermission?: (permission: string, resourceType?: string, resourceId?: string) => Promise<boolean>;
   }
 }
 
@@ -38,12 +43,23 @@ export async function authMiddleware(
       });
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    // Remove 'Bearer ' prefix
+    const token = authHeader.substring(7);
 
-    // Verify JWT token
+    // Initialize JWT service and verify token
+    const jwtService = createJWTService(request.server);
+    let decoded: JWTPayload | null;
+
     try {
-      const decoded = await request.jwtVerify<JWTPayload>();
-      request.user = decoded;
+      // Use our new JWT service for RS256 verification
+      const jwtPayload = await jwtService.verifyAccessToken(token);
+
+      if (!jwtPayload) {
+        throw new Error('Token verification failed');
+      }
+
+      decoded = jwtPayload as JWTPayload;
+      request.jwtUser = decoded;
 
       // Check if token is about to expire (less than 1 hour remaining)
       const now = Math.floor(Date.now() / 1000);
@@ -71,7 +87,7 @@ export async function authMiddleware(
 
     // Additional user validation (check if user still exists and is active)
     const user = await request.server.prisma.user.findUnique({
-      where: { id: request.user.userId },
+      where: { id: (request.jwtUser as JWTPayload).userId },
       select: {
         id: true,
         email: true,
@@ -84,7 +100,7 @@ export async function authMiddleware(
 
     if (!user) {
       logSecurityEvent('auth_user_not_found', 'high', {
-        userId: request.user.userId,
+        userId: (request.jwtUser as JWTPayload).userId,
         ip: request.ip,
         userAgent: request.headers['user-agent'],
       });
@@ -109,10 +125,49 @@ export async function authMiddleware(
     }
 
     // Update user information in token payload
-    request.user = {
-      ...request.user,
+    const updatedUser: JWTPayload = {
+      ...(request.jwtUser as JWTPayload),
       role: user.role,
-      organizationId: user.organizationId,
+    };
+    
+    // Only include organizationId if it exists
+    if (user.organizationId) {
+      updatedUser.organizationId = user.organizationId;
+    }
+    
+    request.jwtUser = updatedUser;
+
+    // Create authorization context
+    const authContext: AuthorizationContext = {
+      userId: user.id,
+      organizationId: user.organizationId || undefined,
+      ipAddress: request.ip,
+      userAgent: request.headers['user-agent'],
+      requestId: (request as any).id,
+      timestamp: new Date(),
+    };
+
+    request.authContext = authContext;
+
+    // Create authorization service instance
+    const authorizationService = new AuthorizationService(request.server.prisma);
+
+    // Add permission checking helper to request
+    request.checkPermission = async (
+      permission: string,
+      resourceType?: string,
+      resourceId?: string
+    ): Promise<boolean> => {
+      const permissionRequest: PermissionCheckRequest = {
+        userId: user.id,
+        permission,
+        resourceType,
+        resourceId,
+        context: authContext,
+      };
+
+      const result = await authorizationService.checkPermission(permissionRequest);
+      return result.allowed;
     };
 
     // Update last activity
@@ -137,29 +192,68 @@ export async function authMiddleware(
   }
 }
 
-// Permission checking helper
-export function requirePermission(permission: string) {
+// Permission checking helper - enhanced with RBAC
+export function requirePermission(
+  permission: string,
+  resourceType?: string,
+  resourceId?: string
+) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    if (!request.user) {
+    if (!request.jwtUser) {
       return reply.status(401).send({
         error: 'Unauthorized',
         message: 'Authentication required',
       });
     }
 
-    if (!request.user.permissions.includes(permission)) {
-      logSecurityEvent('auth_insufficient_permissions', 'medium', {
-        userId: request.user.userId,
-        requiredPermission: permission,
-        userPermissions: request.user.permissions,
+    if (!request.checkPermission) {
+      logSecurityEvent('auth_permission_checker_missing', 'critical', {
+        userId: (request.jwtUser as JWTPayload).userId,
+        permission,
+        url: request.url,
+        method: request.method,
+      });
+
+      return reply.status(500).send({
+        error: 'Internal Server Error',
+        message: 'Permission checking service unavailable',
+      });
+    }
+
+    try {
+      const hasPermission = await request.checkPermission(permission, resourceType, resourceId);
+
+      if (!hasPermission) {
+        logSecurityEvent('auth_insufficient_permissions', 'medium', {
+          userId: (request.jwtUser as JWTPayload).userId,
+          requiredPermission: permission,
+          resourceType,
+          resourceId,
+          ip: request.ip,
+          url: request.url,
+          method: request.method,
+        });
+
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: `Permission required: ${permission}`,
+        });
+      }
+    } catch (error) {
+      logSecurityEvent('auth_permission_check_error', 'high', {
+        userId: (request.jwtUser as JWTPayload).userId,
+        permission,
+        resourceType,
+        resourceId,
+        error: error instanceof Error ? error.message : 'Unknown error',
         ip: request.ip,
         url: request.url,
         method: request.method,
       });
 
-      return reply.status(403).send({
-        error: 'Forbidden',
-        message: `Permission required: ${permission}`,
+      return reply.status(500).send({
+        error: 'Internal Server Error',
+        message: 'Permission validation failed',
       });
     }
   };
@@ -168,18 +262,18 @@ export function requirePermission(permission: string) {
 // Role checking helper
 export function requireRole(role: string) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    if (!request.user) {
+    if (!request.jwtUser) {
       return reply.status(401).send({
         error: 'Unauthorized',
         message: 'Authentication required',
       });
     }
 
-    if (request.user.role !== role) {
+    if ((request.jwtUser as JWTPayload).role !== role) {
       logSecurityEvent('auth_insufficient_role', 'medium', {
-        userId: request.user.userId,
+        userId: (request.jwtUser as JWTPayload).userId,
         requiredRole: role,
-        userRole: request.user.role,
+        userRole: (request.jwtUser as JWTPayload).role,
         ip: request.ip,
         url: request.url,
         method: request.method,
@@ -196,19 +290,19 @@ export function requireRole(role: string) {
 // Organization access checking helper
 export function requireOrganizationAccess() {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    if (!request.user) {
+    if (!request.jwtUser) {
       return reply.status(401).send({
         error: 'Unauthorized',
         message: 'Authentication required',
       });
     }
 
-    const organizationId = request.params?.organizationId || request.body?.organizationId;
+    const organizationId = (request.params as any)?.organizationId || (request.body as any)?.organizationId;
     
-    if (organizationId && request.user.organizationId !== organizationId) {
+    if (organizationId && (request.jwtUser as JWTPayload).organizationId !== organizationId) {
       logSecurityEvent('auth_organization_access_denied', 'high', {
-        userId: request.user.userId,
-        userOrganizationId: request.user.organizationId,
+        userId: (request.jwtUser as JWTPayload).userId,
+        userOrganizationId: (request.jwtUser as JWTPayload).organizationId,
         requestedOrganizationId: organizationId,
         ip: request.ip,
         url: request.url,

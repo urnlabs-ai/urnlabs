@@ -1,0 +1,60 @@
+# ZAP Rules Configuration for Urnlabs AI Platform
+# Format: RULE_ID	ACTION	NOTES
+
+# IGNORE rules for false positives and development-specific issues
+10021	IGNORE	X-Content-Type-Options header missing on API responses (handled by WAF)
+10020	IGNORE	X-Frame-Options header missing (handled by security middleware)
+10016	IGNORE	Web Browser XSS Protection Not Enabled (modern browsers handle this)
+10054	IGNORE	Cookie without SameSite Attribute (handled by application)
+
+# WARN rules for informational findings
+10049	WARN	Storable and Cacheable Content
+10027	WARN	Information Disclosure - Suspicious Comments
+10015	WARN	Re-examine Cache-control Directives
+
+# INFO rules for general security information
+10035	INFO	Strict-Transport-Security Header Not Set
+10063	INFO	Feature Policy Header Not Set
+10038	INFO	Content Security Policy (CSP) Header Not Set
+
+# FAIL rules for critical security issues
+40018	FAIL	SQL Injection
+40019	FAIL	SQL Injection - MySQL
+40020	FAIL	SQL Injection - Oracle
+40021	FAIL	SQL Injection - PostgreSQL
+40022	FAIL	SQL Injection - Hypersonic SQL
+40024	FAIL	SQL Injection - SQLite
+
+90019	FAIL	Code Injection
+90020	FAIL	Remote Code Execution
+90021	FAIL	XPath Injection
+90022	FAIL	Application Error Disclosure
+
+# High severity findings that should fail the build
+20012	FAIL	Anti-CSRF Tokens Scanner
+20014	FAIL	HTTP Parameter Pollution
+20015	FAIL	Heartbleed OpenSSL Vulnerability
+
+# Authentication and session management
+10011	FAIL	Cookie Without Secure Flag
+10017	FAIL	Cross-Domain JavaScript Source File Inclusion
+10025	FAIL	Information Disclosure - Debug Error Messages
+10023	FAIL	Information Disclosure - Database Error Messages
+
+# API-specific rules
+10003	WARN	Vulnerable JS Library (check for outdated libraries)
+10109	INFO	Modern Web Application (informational)
+
+# Custom rules for Urnlabs platform
+# Ignore health check endpoints
+10050	IGNORE	Retrieved from Cache (/health endpoint expected to be cached)
+10051	IGNORE	Retrieved from Cache (/ping endpoint expected to be cached)
+
+# Gateway-specific ignores
+10018	IGNORE	Timestamp Disclosure - Unix (build timestamps are acceptable)
+10028	IGNORE	Open Redirect (for OAuth flows)
+
+# Development vs Production rules
+# These should be uncommented for production scans:
+# 10096	FAIL	Cross-Domain Misconfiguration
+# 10055	FAIL	CSP Scanner

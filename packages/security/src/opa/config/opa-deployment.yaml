@@ -1,0 +1,382 @@
+# Kubernetes Deployment for OPA in Production
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opa-server
+  namespace: urnlabs-security
+  labels:
+    app: opa-server
+    component: authorization
+    tier: security
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: opa-server
+  template:
+    metadata:
+      labels:
+        app: opa-server
+        component: authorization
+        tier: security
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8282"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: opa-server
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: opa
+        image: openpolicyagent/opa:0.58.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8181
+          name: http
+          protocol: TCP
+        - containerPort: 8282
+          name: diagnostics
+          protocol: TCP
+        - containerPort: 9191
+          name: grpc
+          protocol: TCP
+        args:
+        - "run"
+        - "--server"
+        - "--config-file=/config/opa-server.yaml"
+        - "--addr=0.0.0.0:8181"
+        - "--diagnostic-addr=0.0.0.0:8282"
+        - "--log-level=info"
+        - "--log-format=json"
+        - "/policies"
+        env:
+        - name: OPA_LOG_LEVEL
+          value: "info"
+        - name: OPA_LOG_FORMAT
+          value: "json"
+        - name: DECISION_LOGGER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: opa-secrets
+              key: decision-logger-token
+        - name: STATUS_LOGGER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: opa-secrets
+              key: status-logger-token
+        volumeMounts:
+        - name: opa-config
+          mountPath: /config
+          readOnly: true
+        - name: opa-policies
+          mountPath: /policies
+          readOnly: true
+        - name: opa-data
+          mountPath: /data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8181
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health?bundle=true
+            port: 8181
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: opa-config
+        configMap:
+          name: opa-config
+      - name: opa-policies
+        configMap:
+          name: opa-policies
+      - name: opa-data
+        emptyDir: {}
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opa-server
+  namespace: urnlabs-security
+  labels:
+    app: opa-server
+    component: authorization
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8282"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8181
+    targetPort: 8181
+    protocol: TCP
+    name: http
+  - port: 8282
+    targetPort: 8282
+    protocol: TCP
+    name: diagnostics
+  - port: 9191
+    targetPort: 9191
+    protocol: TCP
+    name: grpc
+  selector:
+    app: opa-server
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: opa-server
+  namespace: urnlabs-security
+  labels:
+    app: opa-server
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: opa-server
+  labels:
+    app: opa-server
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: opa-server
+  labels:
+    app: opa-server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: opa-server
+subjects:
+- kind: ServiceAccount
+  name: opa-server
+  namespace: urnlabs-security
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opa-config
+  namespace: urnlabs-security
+  labels:
+    app: opa-server
+data:
+  opa-server.yaml: |
+    server:
+      addr: 0.0.0.0:8181
+      authentication: token
+      authorization: basic
+
+    decision_logs:
+      console: true
+      service: decision_logger
+      reporting:
+        min_delay_seconds: 10
+        max_delay_seconds: 600
+
+    status:
+      console: true
+      service: status_logger
+
+    services:
+      decision_logger:
+        url: http://opa-decision-logger:8080/decisions
+        headers:
+          Authorization: "Bearer ${DECISION_LOGGER_TOKEN}"
+
+      status_logger:
+        url: http://opa-decision-logger:8080/status
+        headers:
+          Authorization: "Bearer ${STATUS_LOGGER_TOKEN}"
+
+    bundles:
+      authz:
+        resource: "bundle.tar.gz"
+        service: authz
+        polling:
+          min_delay_seconds: 10
+          max_delay_seconds: 300
+
+    storage:
+      inmemory: {}
+
+    plugins:
+      envoy_ext_authz_grpc:
+        addr: :9191
+        query: data.authz.allow
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opa-policies
+  namespace: urnlabs-security
+  labels:
+    app: opa-server
+data:
+  default-policies.rego: |
+    # Default policies would be loaded here
+    # In production, policies would be managed through the PolicyManager
+    package authz
+    import rego.v1
+    default allow := false
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: opa-secrets
+  namespace: urnlabs-security
+  labels:
+    app: opa-server
+type: Opaque
+data:
+  decision-logger-token: # base64 encoded token
+  status-logger-token: # base64 encoded token
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: opa-server-netpol
+  namespace: urnlabs-security
+spec:
+  podSelector:
+    matchLabels:
+      app: opa-server
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: urnlabs-api
+    - namespaceSelector:
+        matchLabels:
+          name: urnlabs-gateway
+    ports:
+    - protocol: TCP
+      port: 8181
+    - protocol: TCP
+      port: 9191
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8282
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: urnlabs-security
+    ports:
+    - protocol: TCP
+      port: 8080
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: opa-server-pdb
+  namespace: urnlabs-security
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: opa-server
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: opa-server-hpa
+  namespace: urnlabs-security
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: opa-server
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60

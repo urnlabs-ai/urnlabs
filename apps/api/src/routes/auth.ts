@@ -1,9 +1,10 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
-// import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { config } from '@/lib/config.js';
 import { logSecurityEvent, logBusinessMetric } from '@/lib/logger.js';
 import { authMiddleware } from '@/middleware/auth.js';
+import { createJWTService } from '@/services/jwt-service.js';
+import { validatePasswordStrength, isPasswordBreached } from '@/utils/password-validation.js';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email format'),
@@ -22,10 +23,83 @@ const refreshTokenSchema = z.object({
   refreshToken: z.string(),
 });
 
+const passwordValidationSchema = z.object({
+  password: z.string().min(1, 'Password is required'),
+  email: z.string().email('Invalid email format').optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+});
+
 export async function authRoutes(
   fastify: FastifyInstance,
   _opts: FastifyPluginOptions
 ) {
+  // Initialize JWT service
+  const jwtService = createJWTService(fastify);
+  await jwtService.initialize();
+
+  // Password strength validation endpoint
+  fastify.post('/validate-password', {
+    schema: {
+      tags: ['Authentication'],
+      summary: 'Validate password strength',
+      description: 'Check password strength and security requirements',
+      body: {
+        type: 'object',
+        required: ['password'],
+        properties: {
+          password: { type: 'string', minLength: 1 },
+          email: { type: 'string', format: 'email' },
+          firstName: { type: 'string' },
+          lastName: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            isValid: { type: 'boolean' },
+            score: { type: 'number' },
+            strength: { type: 'string' },
+            errors: { type: 'array', items: { type: 'string' } },
+            suggestions: { type: 'array', items: { type: 'string' } },
+            timeToCrackEstimate: { type: 'string' },
+            isBreached: { type: 'boolean' }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const { password, email, firstName, lastName } = passwordValidationSchema.parse(request.body);
+
+    const userInfo = {
+      email: email?.toLowerCase(),
+      firstName,
+      lastName,
+    };
+
+    // Validate password strength
+    const validation = validatePasswordStrength(password, {}, userInfo);
+
+    // Check if password has been breached (non-blocking)
+    let isBreached = false;
+    try {
+      isBreached = await isPasswordBreached(password);
+    } catch (error) {
+      request.log.warn(error, 'Password breach check failed during validation');
+    }
+
+    return reply.send({
+      isValid: validation.isValid && !isBreached,
+      score: validation.score,
+      strength: validation.strength,
+      errors: validation.errors,
+      suggestions: validation.suggestions,
+      timeToCrackEstimate: validation.timeToCrackEstimate,
+      isBreached,
+    });
+  });
+
   // User registration
   fastify.post('/register', {
     schema: {
@@ -73,7 +147,18 @@ export async function authRoutes(
           type: 'object',
           properties: {
             error: { type: 'string' },
-            message: { type: 'string' }
+            message: { type: 'string' },
+            validation: {
+              type: 'object',
+              properties: {
+                score: { type: 'number' },
+                strength: { type: 'string' },
+                errors: { type: 'array', items: { type: 'string' } },
+                suggestions: { type: 'array', items: { type: 'string' } },
+                timeToCrackEstimate: { type: 'string' }
+              }
+            },
+            suggestion: { type: 'string' }
           }
         },
         409: {
@@ -106,8 +191,60 @@ export async function authRoutes(
       });
     }
 
-    // Hash password (temporary - replace with bcrypt in production)
-    const hashedPassword = '$2b$12$placeholder.hash.for.development.only';
+    // Validate password strength
+    const userInfo = {
+      email: email.toLowerCase(),
+      firstName,
+      lastName,
+    };
+
+    const passwordValidation = validatePasswordStrength(password, {}, userInfo);
+
+    if (!passwordValidation.isValid) {
+      logSecurityEvent('registration_weak_password', 'medium', {
+        email: email.toLowerCase(),
+        passwordScore: passwordValidation.score,
+        passwordStrength: passwordValidation.strength,
+        ip: request.ip,
+        userAgent: request.headers['user-agent'],
+      });
+
+      return reply.status(400).send({
+        error: 'WEAK_PASSWORD',
+        message: 'Password does not meet security requirements',
+        validation: {
+          score: passwordValidation.score,
+          strength: passwordValidation.strength,
+          errors: passwordValidation.errors,
+          suggestions: passwordValidation.suggestions,
+          timeToCrackEstimate: passwordValidation.timeToCrackEstimate,
+        },
+      });
+    }
+
+    // Check if password has been breached
+    try {
+      const isBreached = await isPasswordBreached(password);
+      if (isBreached) {
+        logSecurityEvent('registration_breached_password', 'high', {
+          email: email.toLowerCase(),
+          ip: request.ip,
+          userAgent: request.headers['user-agent'],
+        });
+
+        return reply.status(400).send({
+          error: 'BREACHED_PASSWORD',
+          message: 'This password has been found in data breaches and cannot be used',
+          suggestion: 'Please choose a different password that has not been compromised',
+        });
+      }
+    } catch (error) {
+      // If breach check fails, log but don't block registration
+      request.log.warn(error, 'Password breach check failed, continuing with registration');
+    }
+
+    // Hash password with bcrypt
+    const hashedPassword = await jwtService.hashPassword(password);
 
     try {
       // Create user (with organization if provided)
@@ -151,7 +288,7 @@ export async function authRoutes(
         };
       });
 
-      // Generate JWT tokens
+      // Generate JWT tokens using new JWT service
       const tokenPayload = {
         userId: result.user.id,
         email: result.user.email,
@@ -160,23 +297,7 @@ export async function authRoutes(
         permissions: result.permissions,
       };
 
-      const accessToken = fastify.jwt.sign(tokenPayload, {
-        expiresIn: config.JWT_EXPIRES_IN,
-      });
-
-      const refreshToken = fastify.jwt.sign(
-        { userId: result.user.id, type: 'refresh' },
-        { expiresIn: '30d' }
-      );
-
-      // Store refresh token
-      await request.server.prisma.refreshToken.create({
-        data: {
-          token: refreshToken,
-          userId: result.user.id,
-          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-        },
-      });
+      const tokens = await jwtService.generateTokenPair(tokenPayload);
 
       // Update last login
       await request.server.prisma.user.update({
@@ -194,7 +315,7 @@ export async function authRoutes(
       });
 
       logBusinessMetric('user_registration', 1, 'count', {
-        hasOrganization: Boolean(organizationName),
+        hasOrganization: Boolean(organizationName).toString(),
       });
 
       return reply.status(201).send({
@@ -208,9 +329,9 @@ export async function authRoutes(
           organizationId: result.user.organizationId,
         },
         tokens: {
-          accessToken,
-          refreshToken,
-          expiresIn: 7 * 24 * 60 * 60, // 7 days in seconds
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          expiresIn: tokens.expiresIn,
         },
       });
 
@@ -313,8 +434,8 @@ export async function authRoutes(
       });
     }
 
-    // Verify password (temporary - replace with bcrypt in production)
-    const isPasswordValid = password === 'password123';
+    // Verify password with bcrypt
+    const isPasswordValid = await jwtService.verifyPassword(password, user.passwordHash);
     
     if (!isPasswordValid) {
       logSecurityEvent('login_invalid_password', 'high', {
@@ -330,7 +451,7 @@ export async function authRoutes(
       });
     }
 
-    // Generate JWT tokens
+    // Generate JWT tokens using new JWT service
     const tokenPayload = {
       userId: user.id,
       email: user.email,
@@ -339,28 +460,12 @@ export async function authRoutes(
       permissions: user.permissions.map(p => p.permission),
     };
 
-    const accessToken = fastify.jwt.sign(tokenPayload, {
-      expiresIn: config.JWT_EXPIRES_IN,
+    const tokens = await jwtService.generateTokenPair(tokenPayload);
+
+    // Clean up old PostgreSQL refresh tokens (we now use Redis)
+    await request.server.prisma.refreshToken.deleteMany({
+      where: { userId: user.id },
     });
-
-    const refreshToken = fastify.jwt.sign(
-      { userId: user.id, type: 'refresh' },
-      { expiresIn: '30d' }
-    );
-
-    // Store refresh token (cleanup old ones)
-    await request.server.prisma.$transaction([
-      request.server.prisma.refreshToken.deleteMany({
-        where: { userId: user.id },
-      }),
-      request.server.prisma.refreshToken.create({
-        data: {
-          token: refreshToken,
-          userId: user.id,
-          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        },
-      }),
-    ]);
 
     // Update last login
     await request.server.prisma.user.update({
@@ -392,9 +497,9 @@ export async function authRoutes(
         organizationId: user.organizationId,
       },
       tokens: {
-        accessToken,
-        refreshToken,
-        expiresIn: 7 * 24 * 60 * 60,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn,
       },
     });
   });
@@ -417,67 +522,73 @@ export async function authRoutes(
     const { refreshToken } = refreshTokenSchema.parse(request.body);
 
     try {
-      const decoded = fastify.jwt.verify(refreshToken) as { userId: string; type: string };
-      
-      if (decoded.type !== 'refresh') {
+      // Use new JWT service to verify and rotate refresh token
+      const verification = await jwtService.verifyRefreshToken(refreshToken, true);
+
+      if (!verification.valid) {
+        logSecurityEvent('refresh_token_invalid', 'medium', {
+          ip: request.ip,
+          userAgent: request.headers['user-agent'],
+        });
+
         return reply.status(401).send({
           error: 'Unauthorized',
-          message: 'Invalid refresh token',
+          message: 'Invalid or expired refresh token',
         });
       }
 
-      // Verify refresh token exists and is not expired
-      const storedToken = await request.server.prisma.refreshToken.findFirst({
-        where: {
-          token: refreshToken,
-          userId: decoded.userId,
-          expiresAt: { gt: new Date() },
-        },
-      });
-
-      if (!storedToken) {
-        return reply.status(401).send({
-          error: 'Unauthorized',
-          message: 'Refresh token expired or invalid',
+      if (verification.newTokenPair) {
+        // Token was rotated, return new token pair
+        logSecurityEvent('refresh_token_rotated', 'low', {
+          userId: verification.payload!.userId,
+          ip: request.ip,
+          userAgent: request.headers['user-agent'],
         });
-      }
 
-      // Get user with permissions
-      const user = await request.server.prisma.user.findUnique({
-        where: { id: decoded.userId },
-        include: {
-          permissions: {
-            select: { permission: true },
+        return reply.send({
+          accessToken: verification.newTokenPair.accessToken,
+          refreshToken: verification.newTokenPair.refreshToken,
+          expiresIn: verification.newTokenPair.expiresIn,
+          rotated: true,
+        });
+      } else {
+        // Just generate new access token
+        const user = await request.server.prisma.user.findUnique({
+          where: { id: verification.payload!.userId },
+          include: {
+            permissions: {
+              select: { permission: true },
+            },
           },
-        },
-      });
+        });
 
-      if (!user || !user.isActive) {
-        return reply.status(401).send({
-          error: 'Unauthorized',
-          message: 'User account not found or inactive',
+        if (!user || !user.isActive) {
+          return reply.status(401).send({
+            error: 'Unauthorized',
+            message: 'User account not found or inactive',
+          });
+        }
+
+        const tokenPayload = {
+          userId: user.id,
+          email: user.email,
+          role: user.role,
+          organizationId: user.organizationId,
+          permissions: user.permissions.map(p => p.permission),
+        };
+
+        const newAccessToken = await jwtService.generateAccessToken(tokenPayload);
+
+        return reply.send({
+          accessToken: newAccessToken,
+          expiresIn: 15 * 60, // 15 minutes in seconds
+          rotated: false,
         });
       }
-
-      // Generate new access token
-      const tokenPayload = {
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-        organizationId: user.organizationId,
-        permissions: user.permissions.map(p => p.permission),
-      };
-
-      const newAccessToken = fastify.jwt.sign(tokenPayload, {
-        expiresIn: config.JWT_EXPIRES_IN,
-      });
-
-      return reply.send({
-        accessToken: newAccessToken,
-        expiresIn: 7 * 24 * 60 * 60,
-      });
 
     } catch (error) {
+      request.log.error(error, 'Refresh token verification failed');
+
       return reply.status(401).send({
         error: 'Unauthorized',
         message: 'Invalid refresh token',
@@ -494,19 +605,34 @@ export async function authRoutes(
     },
     preHandler: [authMiddleware],
   }, async (request, reply) => {
-    // Delete all refresh tokens for the user
-    await request.server.prisma.refreshToken.deleteMany({
-      where: { userId: request.user!.userId },
-    });
+    const userId = (request as any).user!.userId;
 
-    logSecurityEvent('user_logout', 'low', {
-      userId: request.user!.userId,
-      ip: request.ip,
-      userAgent: request.headers['user-agent'],
-    });
+    try {
+      // Revoke all user tokens using JWT service (Redis)
+      await jwtService.revokeAllUserTokens(userId);
 
-    return reply.send({
-      message: 'Logged out successfully',
-    });
+      // Also clean up any remaining PostgreSQL refresh tokens
+      await request.server.prisma.refreshToken.deleteMany({
+        where: { userId },
+      });
+
+      logSecurityEvent('user_logout', 'low', {
+        userId,
+        ip: request.ip,
+        userAgent: request.headers['user-agent'],
+      });
+
+      return reply.send({
+        message: 'Logged out successfully',
+      });
+
+    } catch (error) {
+      request.log.error(error, 'Logout failed');
+
+      return reply.status(500).send({
+        error: 'Internal Server Error',
+        message: 'Logout failed',
+      });
+    }
   });
 }

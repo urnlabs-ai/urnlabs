@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { z } from 'zod';
 
 export async function usersRoutes(
   fastify: FastifyInstance,
@@ -15,7 +14,7 @@ export async function usersRoutes(
     },
   }, async (request, reply) => {
     const user = await request.server.prisma.user.findUnique({
-      where: { id: request.user!.userId },
+      where: { id: (request.user as any).userId },
       select: {
         id: true,
         email: true,

@@ -180,7 +180,7 @@ export class AgentOrchestrator {
           timestamp: new Date().toISOString()
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       const duration = Date.now() - startTime
       
       return {
@@ -288,7 +288,7 @@ export class AgentOrchestrator {
           timestamp: new Date().toISOString()
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       const duration = Date.now() - startTime
       
       return {
@@ -319,7 +319,7 @@ export class AgentOrchestrator {
       const nodeAgents: AgentInfo[] = []
       if (nodeAgentsResponse.status === 'fulfilled') {
         const agents = nodeAgentsResponse.value.data.agents || []
-        agents.forEach(agent => {
+        agents.forEach((agent: any) => {
           nodeAgents.push({
             name: agent.name,
             type: agent.type,
@@ -376,7 +376,7 @@ export class AgentOrchestrator {
         queuedTasks: maestroStatus.status === 'fulfilled' ? maestroStatus.value.tasks.queued : 0,
         systemHealth
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to get system status:', error)
       
       return {
@@ -406,7 +406,7 @@ export class AgentOrchestrator {
 
       if (nodeAgentsResponse.status === 'fulfilled') {
         const agents = nodeAgentsResponse.value.data.agents || []
-        agents.forEach(agent => {
+        agents.forEach((agent: any) => {
           nodeAgents.push({
             name: agent.name,
             type: agent.type,
@@ -433,7 +433,7 @@ export class AgentOrchestrator {
         nodejs: nodeAgents,
         go: processedGoAgents
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to get all agents:', error)
       return { nodejs: [], go: [] }
     }

@@ -1,95 +1,22 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Monorepo managed with `pnpm` workspaces.
-- Websites: `worktrees/urnlabs-ai` (Astro), `worktrees/usmanramzan-ai`, `worktrees/eprecisio-com`, shared UI in `worktrees/shared-components` and `worktrees/design-system`.
-- Packages: `packages/ai-agents` (TypeScript library, Vitest, tsup), `packages/config` (shared ESLint/TS/Tailwind configs), `packages/mcp-integration`, `packages/monitoring`, `packages/security`, `packages/testing`, `packages/ui`.
-- Ops: `docker/`, `docker-compose*.yml`, `DOCKER.md`, `DOCKER-COMPOSE-LOCAL.md`, `init.sql`.
-- Scripts: `scripts/` automation; root docs in `README.md`.
+Monorepo managed by `pnpm` workspaces. Web apps live in `worktrees/urnlabs-ai`, `worktrees/usmanramzan-ai`, and `worktrees/eprecisio-com`; shared UI in `worktrees/shared-components` and `worktrees/design-system`. Libraries and configs sit under `packages/*`, with `packages/ai-agents` hosting the core agent SDK and tests in `src/__tests__`. Docker assets live in `docker/`; helper scripts in `scripts/`.
 
 ## Build, Test, and Development Commands
-- Install: `pnpm install`
-- Run URNLabs site: `pnpm dev:urnlabs` or `cd worktrees/urnlabs-ai && pnpm dev`
-- Build all sites: `pnpm build:all`
-- Build AI agents lib: `pnpm -w --filter @urnlabs/ai-agents build`
-- Lint (site): `cd worktrees/urnlabs-ai && pnpm lint`
-- Type-check (site): `cd worktrees/urnlabs-ai && pnpm typecheck`
-- Local Docker stack: `docker compose -f docker-compose-local.yml up --build` (see `DOCKER-COMPOSE-LOCAL.md`).
+Install dependencies with `pnpm install`. Run the URNLabs Astro site via `pnpm dev:urnlabs` or `cd worktrees/urnlabs-ai && pnpm dev`. Build every site using `pnpm build:all`; build only the agent library with `pnpm -w --filter @urnlabs/ai-agents build`. Execute tests for the agent package using `pnpm -w --filter @urnlabs/ai-agents test` and add `:coverage` for reports. Spin up the local Docker stack with `docker compose -f docker-compose-local.yml up --build`.
 
 ## Coding Style & Naming Conventions
-- Language: TypeScript preferred; Astro + React for sites.
-- Indentation: 2 spaces; no trailing whitespace.
-- Linting/formatting: shared config via `@urnlabs/config` (ESLint + Prettier compatibility, Astro rules). Fix with `pnpm lint:fix` where available.
-- Naming: Components `PascalCase.tsx/.astro`; files/dirs `kebab-case`; types/interfaces `PascalCase`; constants `UPPER_SNAKE_CASE`.
-- Imports: in `packages/ai-agents`, aliases `@` and `@tests` are configured.
+Prefer TypeScript with Astro/React frontends. Follow shared ESLint/Prettier rules from `@urnlabs/config`: 2-space indentation, no trailing whitespace, and sorted imports where enforced. Name components in PascalCase (`ButtonGroup.tsx`), directories in kebab-case, interfaces/types in PascalCase, and constants in UPPER_SNAKE_CASE. Run `pnpm lint` or `pnpm lint:fix` in each workspace before opening a PR.
 
 ## Testing Guidelines
-- Framework: Vitest in `packages/ai-agents`.
-- Layout: `src/__tests__/**/*.{test,spec}.ts`.
-- Run: `pnpm -w --filter @urnlabs/ai-agents test`; coverage: `pnpm -w --filter @urnlabs/ai-agents test:coverage`.
-- Coverage thresholds: 80% lines/branches/functions/statements (see `packages/ai-agents/vitest.config.ts`).
-- Prefer fast unit tests; isolate integration tests with `test:integration`. Mock network/API keys by default.
+Vitest drives unit tests under `packages/ai-agents/src/__tests__/**/*.test.ts`. Keep unit tests fast and mock external services by default; move slower scenarios to `test:integration`. Maintain >=80% coverage across lines, branches, functions, and statements (`vitest.config.ts`). Use descriptive filenames mirrored after implementations, e.g. `agent-runner.test.ts`.
 
 ## Commit & Pull Request Guidelines
-- Commits: concise, imperative, scoped. Examples:
-  - `Fix Dockerfile PATH for dev scripts`
-  - `Add shared ESLint config and docs`
-- PRs must include: clear description, linked issues, screenshots for UI changes, test plan/coverage notes, and any Docker/env impacts. Keep PRs focused and small.
+Write imperative commit messages scoped to the change, e.g. `Add Redis health probe`. Each PR should describe motivation, link relevant issues, and note test results. Include screenshots for UI/UIX updates and document any Docker or env variable impacts.
 
-## Security & Configuration
-- Secrets: never commit. Copy `.env.example` to `.env` locally; document new keys.
-- Docker: prefer local compose files; do not push registry credentials.
-- Data: seed/init SQL lives in `init.sql`; review before applying.
+## Security & Configuration Tips
+Never commit secrets. Copy `.env.example` to configure local runs and document new keys such as `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `OPENAI_API_KEY`, and `CLAUDE_API_KEY`. Health checks hit `/health` or `/health/ready`; refer to `DOCKER-SERVICES.md` before re-enabling legacy services like `urn-maestro`.
 
----
-
-# AI Agents Service and Library
-
-## Overview
-- `apps/agents`: Long-running service that orchestrates AI agents, executes workflows, manages queues, and exposes REST + WebSocket APIs.
-- `packages/ai-agents`: Reusable TypeScript library with agent abstractions and provider integrations (Claude/OpenAI).
-
-## Run Modes
-- Unified local stack: `docker compose -f docker-compose-local.yml up -d`
-- Node.js-only stack (API + Agents + Bridge):
-  - Provision Postgres/Redis: `bash scripts/setup-dependencies.sh`
-  - Start: `docker compose -f docker-compose-nodejs.yml up -d`
-  - Monitor: `bash scripts/monitor-health-checks.sh`
-  - Troubleshoot: `bash scripts/debug-api-health.sh`
-
-## Current State
-- The historical `urn-maestro` service is not implemented in this repository and is disabled in local Compose files. Any `MAESTRO_ENDPOINT` references are commented out. See `DOCKER-SERVICES.md` for re‑enable guidance.
-- Agents, API, Bridge, and Gateway are the active runtime services for local development.
-
-## Environment Variables
-- Common: `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET` (API), `CLAUDE_API_KEY` (optional), `OPENAI_API_KEY` (optional)
-- Agents: `AGENT_SERVICE_PORT` (default 3001), `NODE_ENV`, `LOG_LEVEL`
-- Library: typically consumes provider keys via process env.
-
-## Agents Service API
-- Base URL: `http://localhost:3001`
-- Health:
-  - `GET /health` → basic
-  - `GET /health/detailed` → queue + WS + orchestrator stats
-- Agents:
-  - `GET /agents/status` → list agents (name, type, status, capabilities)
-  - `GET /agents/tasks` → running tasks
-- Workflows:
-  - `POST /workflows/execute` → start a workflow run
-  - `GET /workflows/:workflowRunId/status` → poll status
-  - `POST /workflows/:workflowRunId/cancel` → cancel
-
-## Health Checks and Debugging
-- Compose health checks hit `/health` or `/health/ready` (API). If unhealthy:
-  - `bash scripts/debug-api-health.sh` to inspect env, connectivity, Prisma, and endpoints
-  - `bash scripts/fix-container-health.sh` to attempt migrations and restart
-  - See `TROUBLESHOOTING-DOCKER.md` for common issues
-
-## Packages/Library Development
-- Build: `pnpm -w --filter @urnlabs/ai-agents build`
-- Tests: `pnpm -w --filter @urnlabs/ai-agents test` (or `test:coverage`)
-- Typecheck: `pnpm -w --filter @urnlabs/ai-agents typecheck`
-
-## Notes
-- Linux: `host.docker.internal` is mapped via `extra_hosts` in Compose for host DB/Redis access.
-- Migrations: API applies migrations on boot in dev mode; ensure DB is reachable.
+## Architecture Overview
+The agents service in `apps/agents` exposes REST and WebSocket endpoints at `http://localhost:3001` (`/health`, `/agents/status`, workflow routes). PostgreSQL and Redis back queues via BullMQ; shared UI packages integrate across sites to keep design consistent.

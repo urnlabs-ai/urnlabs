@@ -1,0 +1,40 @@
+{
+  "name": "@urnlabs/feature-flags",
+  "version": "1.0.0",
+  "description": "Feature flag management system for Urnlabs AI Platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "redis": "^4.6.0",
+    "zod": "^3.23.8",
+    "fastify": "^4.24.3",
+    "@fastify/cors": "^8.4.0",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.0",
+    "@types/uuid": "^9.0.6",
+    "@types/jsonwebtoken": "^9.0.5",
+    "typescript": "^5.2.2",
+    "vitest": "^1.0.0",
+    "eslint": "^8.52.0",
+    "@typescript-eslint/eslint-plugin": "^6.9.0",
+    "@typescript-eslint/parser": "^6.9.0"
+  },
+  "keywords": [
+    "feature-flags",
+    "deployment",
+    "canary",
+    "ab-testing"
+  ],
+  "author": "Urnlabs AI Team",
+  "license": "MIT"
+}

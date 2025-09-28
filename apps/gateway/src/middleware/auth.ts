@@ -3,7 +3,6 @@ import jwt from 'jsonwebtoken';
 import config from '../lib/config.js';
 import logger from '../lib/logger.js';
 import redisManager from '../lib/redis.js';
-import { AuthenticatedRequest } from '../types/index.js';
 
 interface JwtPayload {
   userId: string;
@@ -15,7 +14,7 @@ interface JwtPayload {
 }
 
 export async function authenticate(
-  request: FastifyRequest & { user?: AuthenticatedRequest },
+  request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
   try {
@@ -54,7 +53,7 @@ export async function authenticate(
     }
 
     // Attach user information to request
-    request.user = {
+    (request as any).user = {
       userId: decoded.userId,
       organizationId: decoded.organizationId,
       role: decoded.role,
@@ -90,13 +89,13 @@ export async function authenticate(
 
 export function authorize(permissions: string[] = []) {
   return async function(
-    request: FastifyRequest & { user?: AuthenticatedRequest },
+    request: FastifyRequest,
     reply: FastifyReply
   ): Promise<void> {
-    if (!request.user) {
-      return reply.status(401).send({ 
-        error: 'Unauthorized', 
-        message: 'Authentication required' 
+    if (!(request as any).user) {
+      return reply.status(401).send({
+        error: 'Unauthorized',
+        message: 'Authentication required'
       });
     }
 
@@ -104,10 +103,10 @@ export function authorize(permissions: string[] = []) {
       return; // No specific permissions required
     }
 
-    const hasPermission = permissions.every(permission => 
-      request.user!.permissions.includes(permission) ||
-      request.user!.permissions.includes('admin:*') ||
-      request.user!.role === 'SUPER_ADMIN'
+    const hasPermission = permissions.every(permission =>
+      (request as any).user.permissions.includes(permission) ||
+      (request as any).user.permissions.includes('admin:*') ||
+      (request as any).user.role === 'SUPER_ADMIN'
     );
 
     if (!hasPermission) {
@@ -120,7 +119,7 @@ export function authorize(permissions: string[] = []) {
 }
 
 export async function optionalAuth(
-  request: FastifyRequest & { user?: AuthenticatedRequest },
+  request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
   const authHeader = request.headers.authorization;
@@ -151,7 +150,7 @@ export async function generateToken(user: {
   };
 
   const token = jwt.sign(payload, config.jwt.secret, {
-    expiresIn: config.jwt.expiresIn,
+    algorithm: 'HS256',
     issuer: 'urnlabs-gateway',
     audience: 'urnlabs-platform'
   });

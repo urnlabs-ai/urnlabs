@@ -1,0 +1,276 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database - Staging
+  postgres-staging:
+    image: postgres:15
+    container_name: urnlabs-postgres-staging
+    environment:
+      POSTGRES_DB: ${STAGING_DB_NAME}
+      POSTGRES_USER: ${STAGING_DB_USER}
+      POSTGRES_PASSWORD: ${STAGING_DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+      - ./apps/api/prisma/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - urnlabs-platform-staging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${STAGING_DB_USER} -d ${STAGING_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # Redis Cache - Staging
+  redis-staging:
+    image: redis:7-alpine
+    container_name: urnlabs-redis-staging
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_staging_data:/data
+      - ./redis/redis.staging.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - urnlabs-platform-staging
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.2'
+
+  # API Service - Staging
+  api-staging:
+    image: ghcr.io/${GITHUB_REPOSITORY}-api:${IMAGE_TAG}
+    container_name: urnlabs-api-staging
+    env_file:
+      - .github/environments/staging.env
+    environment:
+      DATABASE_URL: ${STAGING_DATABASE_URL}
+      REDIS_URL: redis://redis-staging:6379
+    ports:
+      - "7001:7001"
+    depends_on:
+      postgres-staging:
+        condition: service_healthy
+      redis-staging:
+        condition: service_healthy
+    networks:
+      - urnlabs-platform-staging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7001/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+      replicas: 2
+
+  # Agents Service - Staging
+  agents-staging:
+    image: ghcr.io/${GITHUB_REPOSITORY}-agents:${IMAGE_TAG}
+    container_name: urnlabs-agents-staging
+    env_file:
+      - .github/environments/staging.env
+    ports:
+      - "7002:7002"
+    depends_on:
+      api-staging:
+        condition: service_healthy
+    networks:
+      - urnlabs-platform-staging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7002/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+      replicas: 2
+
+  # Gateway Service - Staging
+  gateway-staging:
+    image: ghcr.io/${GITHUB_REPOSITORY}-gateway:${IMAGE_TAG}
+    container_name: urnlabs-gateway-staging
+    env_file:
+      - .github/environments/staging.env
+    ports:
+      - "7000:7000"
+    depends_on:
+      api-staging:
+        condition: service_healthy
+      agents-staging:
+        condition: service_healthy
+    networks:
+      - urnlabs-platform-staging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7000/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.3'
+      replicas: 2
+
+  # Bridge Service - Staging
+  bridge-staging:
+    image: ghcr.io/${GITHUB_REPOSITORY}-bridge:${IMAGE_TAG}
+    container_name: urnlabs-bridge-staging
+    env_file:
+      - .github/environments/staging.env
+    ports:
+      - "7003:7003"
+    depends_on:
+      gateway-staging:
+        condition: service_healthy
+    networks:
+      - urnlabs-platform-staging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7003/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.3'
+
+  # Dashboard Service - Staging
+  dashboard-staging:
+    image: ghcr.io/${GITHUB_REPOSITORY}-dashboard:${IMAGE_TAG}
+    container_name: urnlabs-dashboard-staging
+    env_file:
+      - .github/environments/staging.env
+    ports:
+      - "7004:7004"
+    depends_on:
+      gateway-staging:
+        condition: service_healthy
+    networks:
+      - urnlabs-platform-staging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7004/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.3'
+
+  # Prometheus - Staging Monitoring
+  prometheus-staging:
+    image: prom/prometheus:latest
+    container_name: urnlabs-prometheus-staging
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.staging.yml:/etc/prometheus/prometheus.yml
+      - prometheus_staging_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    networks:
+      - urnlabs-platform-staging
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '0.5'
+
+  # Grafana - Staging Monitoring
+  grafana-staging:
+    image: grafana/grafana:latest
+    container_name: urnlabs-grafana-staging
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_staging_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_SECURITY_ALLOW_EMBEDDING: true
+      GF_AUTH_ANONYMOUS_ENABLED: false
+    depends_on:
+      - prometheus-staging
+    networks:
+      - urnlabs-platform-staging
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.3'
+
+  # Load Balancer - Staging
+  nginx-staging:
+    image: nginx:alpine
+    container_name: urnlabs-nginx-staging
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.staging.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl/staging:/etc/ssl/certs:ro
+    depends_on:
+      - gateway-staging
+      - dashboard-staging
+    networks:
+      - urnlabs-platform-staging
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.2'
+
+volumes:
+  postgres_staging_data:
+  redis_staging_data:
+  prometheus_staging_data:
+  grafana_staging_data:
+
+networks:
+  urnlabs-platform-staging:
+    driver: bridge
+    name: urnlabs-platform-staging-network

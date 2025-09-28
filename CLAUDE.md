@@ -332,3 +332,7 @@ For detailed setup instructions, refer to `DOCKER-COMPOSE-LOCAL.md`.
 ---
 
 **Remember**: Every feature must be production-ready with real functionality, proper error handling, comprehensive testing, and full documentation. No mockups, no fake data, no shortcuts.
+
+## Task Master AI Instructions
+**Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
+@./.taskmaster/CLAUDE.md

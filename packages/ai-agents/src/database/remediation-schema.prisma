@@ -1,0 +1,492 @@
+// Remediation System Database Schema Extension
+// This file contains additional models needed for the automated remediation system
+// These should be added to the main Prisma schema file
+
+// ============================================================================
+// REMEDIATION TRACKING MODELS
+// ============================================================================
+
+model RemediationExecution {
+  id                    String   @id @default(cuid())
+  violationId          String   @unique
+  policyId             String
+  remediationPolicyId  String
+
+  // Execution state
+  status               String   @default("initiated") // initiated, in_progress, completed, failed, escalated, cancelled
+  currentStep          Int      @default(0)
+  totalSteps           Int      @default(0)
+
+  // Timing
+  initiatedAt          DateTime @default(now())
+  completedAt          DateTime?
+
+  // Actor and context
+  initiatedBy          String
+  taskId               String?
+  organizationId       String?
+
+  // Results
+  actionsExecuted      Int      @default(0)
+  actionsSucceeded     Int      @default(0)
+  actionsFailed        Int      @default(0)
+  escalated            Boolean  @default(false)
+
+  // Escalation tracking
+  escalationLevel      Int      @default(0)
+  escalatedAt          DateTime?
+  escalationReason     String?
+
+  // Audit and compliance
+  auditTrailId         String?
+  complianceFrameworks String[] @default([])
+
+  // JSON fields for flexible data
+  violationContext     Json     @default("{}")
+  executionMetadata    Json     @default("{}")
+
+  // Relations
+  organization         Organization? @relation(fields: [organizationId], references: [id])
+  actions              RemediationAction[]
+  auditEntries         RemediationAuditEntry[]
+  escalations          RemediationEscalation[]
+  approvals            RemediationApproval[]
+
+  // Indexes
+  @@index([violationId])
+  @@index([status, initiatedAt])
+  @@index([organizationId, status])
+  @@index([escalated, escalationLevel])
+  @@index([initiatedAt])
+  @@map("remediation_executions")
+}
+
+model RemediationAction {
+  id                    String   @id @default(cuid())
+  executionId           String
+  actionId              String   // ID from the remediation policy
+  actionType            String   // block_task, revoke_access, quarantine_data, etc.
+
+  // Status and timing
+  status                String   @default("pending") // pending, running, success, failed, skipped
+  startedAt             DateTime @default(now())
+  completedAt           DateTime?
+  executionTimeMs       Int?
+
+  // Configuration and results
+  actionConfig          Json     @default("{}")
+  result                Json?
+  error                 String?
+
+  // Retry and reliability
+  retryAttempts         Int      @default(0)
+  maxRetries            Int      @default(3)
+
+  // Prerequisites and dependencies
+  prerequisites         String[] @default([])
+  dependsOn             String[] @default([])
+
+  // Audit
+  auditTrailId          String?
+
+  // Relations
+  execution             RemediationExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  auditEntries          RemediationAuditEntry[]
+
+  // Indexes
+  @@index([executionId, status])
+  @@index([actionType, status])
+  @@index([startedAt])
+  @@map("remediation_actions")
+}
+
+model RemediationPolicy {
+  id                    String   @id @default(cuid())
+  name                  String
+  description           String
+  enabled               Boolean  @default(true)
+  priority              Int      @default(50)
+
+  // Triggers
+  policyViolationTypes  String[] @default([])
+  severityThresholds    String[] @default(["medium", "high", "critical"])
+
+  // Actions configuration
+  immediateActions      Json     @default("[]")
+  escalationActions     Json     @default("[]")
+
+  // Escalation configuration
+  escalationDelayMs     Int      @default(600000) // 10 minutes
+  maxEscalationLevel    Int      @default(3)
+
+  // Compliance and audit
+  complianceFrameworks  String[] @default([])
+  auditRequired         Boolean  @default(true)
+  retentionPeriodDays   Int      @default(2555) // 7 years for SOX compliance
+
+  // Metadata
+  version               String   @default("1.0.0")
+  tags                  String[] @default([])
+
+  // Organization relationship
+  organizationId        String?
+  organization          Organization? @relation(fields: [organizationId], references: [id])
+
+  // Audit fields
+  createdBy             String
+  updatedBy             String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  executions            RemediationExecution[]
+  versions              RemediationPolicyVersion[]
+
+  // Indexes
+  @@index([organizationId, enabled])
+  @@index([priority, enabled])
+  @@index([name])
+  @@map("remediation_policies")
+}
+
+model RemediationPolicyVersion {
+  id              String   @id @default(cuid())
+  policyId        String
+  version         String
+  changes         Json     @default("[]")
+  changeReason    String
+  changedBy       String
+  changedAt       DateTime @default(now())
+  approvedBy      String?
+  approvedAt      DateTime?
+
+  // Relations
+  policy          RemediationPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, version])
+  @@index([policyId, changedAt])
+  @@map("remediation_policy_versions")
+}
+
+model RemediationEscalation {
+  id                    String   @id @default(cuid())
+  executionId           String
+  level                 Int
+  maxLevel              Int
+
+  // Status and timing
+  status                String   @default("scheduled") // scheduled, in_progress, completed, failed, cancelled
+  scheduledAt           DateTime @default(now())
+  triggeredAt           DateTime?
+  completedAt           DateTime?
+
+  // Actions and execution
+  escalationActions     Json     @default("[]")
+  executedActions       Json     @default("[]")
+
+  // Context
+  escalationReason      String
+  escalationChain       String[] @default([])
+
+  // Next escalation
+  nextEscalationAt      DateTime?
+  autoCancel            Boolean  @default(false)
+
+  // Metadata
+  metadata              Json     @default("{}")
+
+  // Relations
+  execution             RemediationExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([executionId, level])
+  @@index([status, scheduledAt])
+  @@index([triggeredAt])
+  @@map("remediation_escalations")
+}
+
+model RemediationApproval {
+  id                    String   @id @default(cuid())
+  executionId           String
+  actionId              String?  // Specific action requiring approval
+
+  // Approval request details
+  requesterId           String   // Who/what requested the approval
+  requesterType         String   @default("system") // system, user, agent
+  approverEmails        String[] @default([])
+
+  // Approval configuration
+  reason                String
+  requireAllApprovers   Boolean  @default(false)
+
+  // Status and timing
+  status                String   @default("pending") // pending, approved, rejected, expired
+  createdAt             DateTime @default(now())
+  expiresAt             DateTime
+
+  // Approval result
+  approvedBy            String?
+  approvedAt            DateTime?
+  rejectedBy            String?
+  rejectedAt            DateTime?
+  rejectionReason       String?
+
+  // Metadata
+  metadata              Json     @default("{}")
+
+  // Relations
+  execution             RemediationExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([executionId, status])
+  @@index([status, expiresAt])
+  @@index([approverEmails])
+  @@map("remediation_approvals")
+}
+
+model RemediationAuditEntry {
+  id                    String   @id @default(cuid())
+  timestamp             DateTime @default(now())
+
+  // Remediation context
+  remediationExecutionId String
+  violationId           String
+  policyId              String
+  remediationPolicyId   String
+
+  // Action details
+  actionType            String
+  actionId              String
+  actionStatus          String   // initiated, in_progress, completed, failed, cancelled
+
+  // Actor information
+  actor                 String
+  actorType             String   @default("system") // system, user, service
+
+  // Resource context
+  resourceType          String
+  resourceId            String
+  resourceState         Json?
+
+  // Execution details
+  executionTimeMs       Int?
+  result                Json?
+  error                 String?
+
+  // Decision context
+  decisionRationale     String?
+  alternativesConsidered String[] @default([])
+  approvalRequired      Boolean  @default(false)
+  approvalStatus        String?  // pending, approved, rejected
+
+  // Compliance metadata
+  complianceFrameworks  String[] @default([])
+  riskLevel             String   @default("medium") // low, medium, high, critical
+  dataClassification    String   @default("internal") // public, internal, confidential, restricted
+  retentionPeriodDays   Int      @default(2555)
+
+  // Chain integrity
+  previousEntryHash     String?
+  entryHash             String
+
+  // Additional metadata
+  metadata              Json     @default("{}")
+
+  // Relations
+  execution             RemediationExecution? @relation(fields: [remediationExecutionId], references: [id])
+  action                RemediationAction? @relation(fields: [actionId], references: [id])
+
+  // Indexes
+  @@index([remediationExecutionId, timestamp])
+  @@index([violationId, timestamp])
+  @@index([actionType, timestamp])
+  @@index([actor, timestamp])
+  @@index([riskLevel, timestamp])
+  @@index([complianceFrameworks, timestamp])
+  @@index([entryHash])
+  @@map("remediation_audit_entries")
+}
+
+model RemediationWorkflowState {
+  id                    String   @id @default(cuid())
+  violationId           String   @unique
+
+  // Workflow state
+  status                String   @default("pending") // pending, in_progress, completed, failed, cancelled
+  currentStep           Int      @default(0)
+  totalSteps            Int      @default(0)
+
+  // Node assignment and coordination
+  assignedNode          String
+
+  // Timing
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  heartbeatAt           DateTime @default(now())
+
+  // Metadata and context
+  metadata              Json     @default("{}")
+
+  // Indexes
+  @@index([status, assignedNode])
+  @@index([violationId])
+  @@index([heartbeatAt])
+  @@map("remediation_workflow_states")
+}
+
+model RemediationMetrics {
+  id                    String   @id @default(cuid())
+
+  // Metric details
+  metricType            String   // execution_time, success_rate, escalation_rate, etc.
+  metricValue           Float
+  unit                  String   // ms, percent, count, etc.
+
+  // Context
+  organizationId        String?
+  executionId           String?
+  actionType            String?
+  policyId              String?
+
+  // Time dimensions
+  timestamp             DateTime @default(now())
+  periodStart           DateTime
+  periodEnd             DateTime
+
+  // Aggregation level
+  aggregationLevel      String   @default("execution") // execution, hourly, daily, weekly, monthly
+
+  // Compliance tracking
+  complianceFramework   String?
+
+  // Metadata
+  tags                  Json     @default("{}")
+
+  // Relations
+  organization          Organization? @relation(fields: [organizationId], references: [id])
+
+  // Indexes
+  @@index([metricType, timestamp])
+  @@index([organizationId, metricType, timestamp])
+  @@index([aggregationLevel, periodStart, periodEnd])
+  @@index([complianceFramework, timestamp])
+  @@map("remediation_metrics")
+}
+
+model RemediationConfiguration {
+  id                    String   @id @default(cuid())
+
+  // Configuration details
+  configKey             String   @unique
+  configValue           Json
+  configType            String   @default("system") // system, organization, user
+
+  // Scope
+  organizationId        String?
+  userId                String?
+
+  // Metadata
+  description           String?
+  version               String   @default("1.0.0")
+
+  // Audit
+  createdBy             String
+  updatedBy             String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  organization          Organization? @relation(fields: [organizationId], references: [id])
+
+  // Indexes
+  @@index([configKey])
+  @@index([organizationId, configType])
+  @@map("remediation_configurations")
+}
+
+// ============================================================================
+// EXTENSIONS TO EXISTING MODELS
+// ============================================================================
+
+// Add these fields to existing models:
+
+// Organization model additions:
+// remediationPolicies    RemediationPolicy[]
+// remediationExecutions  RemediationExecution[]
+// remediationMetrics     RemediationMetrics[]
+// remediationConfigs     RemediationConfiguration[]
+
+// Notification model additions (if not already present):
+model Notification {
+  id                    String   @id @default(cuid())
+  type                  String   // policy_violation, escalation_notification, approval_required, etc.
+  title                 String
+  message               String
+  urgency               String   @default("medium") // low, medium, high, critical
+
+  // Recipient
+  recipientEmail        String
+  recipientUserId       String?
+
+  // Status and timing
+  status                String   @default("pending") // pending, sent, delivered, read, failed
+  createdAt             DateTime @default(now())
+  sentAt                DateTime?
+  readAt                DateTime?
+  expiresAt             DateTime?
+
+  // Context
+  relatedResourceType   String?  // remediation_execution, policy_violation, etc.
+  relatedResourceId     String?
+
+  // Metadata
+  metadata              Json     @default("{}")
+
+  // Retry tracking
+  attempts              Int      @default(0)
+  maxAttempts           Int      @default(3)
+  lastAttemptAt         DateTime?
+
+  // Indexes
+  @@index([recipientEmail, status])
+  @@index([type, status, createdAt])
+  @@index([urgency, status])
+  @@index([relatedResourceType, relatedResourceId])
+  @@map("notifications")
+}
+
+// ApprovalRequest model (if not already present):
+model ApprovalRequest {
+  id                    String   @id @default(cuid())
+
+  // Request details
+  taskId                String?
+  violationId           String?
+  requesterId           String
+  reason                String
+
+  // Approvers
+  approverEmails        String[] @default([])
+  requireAllApprovers   Boolean  @default(false)
+
+  // Status and timing
+  status                String   @default("pending") // pending, approved, rejected, expired
+  createdAt             DateTime @default(now())
+  expiresAt             DateTime
+
+  // Resolution
+  approvedBy            String?
+  approvedAt            DateTime?
+  rejectedBy            String?
+  rejectedAt            DateTime?
+  rejectionReason       String?
+
+  // Metadata
+  metadata              Json     @default("{}")
+
+  // Indexes
+  @@index([status, expiresAt])
+  @@index([approverEmails])
+  @@index([violationId])
+  @@map("approval_requests")
+}

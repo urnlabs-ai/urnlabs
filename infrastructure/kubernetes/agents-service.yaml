@@ -1,0 +1,154 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agents
+  namespace: urnlabs-platform
+  labels:
+    app.kubernetes.io/name: agents
+    app.kubernetes.io/component: agents
+    app.kubernetes.io/version: latest
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: agents
+      app.kubernetes.io/component: agents
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: agents
+        app.kubernetes.io/component: agents
+        app.kubernetes.io/version: latest
+    spec:
+      imagePullSecrets:
+      - name: registry-credentials
+      containers:
+      - name: agents
+        image: ghcr.io/urnlabs/urnlabs-agents:latest
+        ports:
+        - containerPort: 7002
+          name: http
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: urnlabs-platform-config
+              key: NODE_ENV
+        - name: AGENTS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: urnlabs-platform-config
+              key: AGENTS_PORT
+        - name: AGENTS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: urnlabs-platform-config
+              key: AGENTS_HOST
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: urnlabs-platform-secrets
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: urnlabs-platform-secrets
+              key: REDIS_URL
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: urnlabs-platform-secrets
+              key: ANTHROPIC_API_KEY
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: urnlabs-platform-secrets
+              key: OPENAI_API_KEY
+        - name: AGENT_REGISTRY_URL
+          value: "http://api-service:7001"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 7002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 7002
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 1
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agents-service
+  namespace: urnlabs-platform
+  labels:
+    app.kubernetes.io/name: agents
+    app.kubernetes.io/component: agents
+spec:
+  type: ClusterIP
+  ports:
+  - port: 7002
+    targetPort: 7002
+    protocol: TCP
+    name: http
+  selector:
+    app.kubernetes.io/name: agents
+    app.kubernetes.io/component: agents
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: agents-hpa
+  namespace: urnlabs-platform
+  labels:
+    app.kubernetes.io/name: agents
+    app.kubernetes.io/component: autoscaler
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: agents
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

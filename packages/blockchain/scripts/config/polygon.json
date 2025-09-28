@@ -1,0 +1,35 @@
+{
+  "network": "polygon",
+  "urnToken": {
+    "name": "Urn Token",
+    "symbol": "URN",
+    "initialSupply": "1000000"
+  },
+  "yieldFarm": {
+    "urnPerBlock": "2",
+    "bonusBlocks": 50000,
+    "emergencyWithdrawFee": 300
+  },
+  "liquidityManager": {
+    "positionManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
+    "swapRouter": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+    "quoter": "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6",
+    "managementFee": 75
+  },
+  "rewardDistributor": {
+    "rewardPerSecond": "0.5",
+    "durationDays": 365,
+    "inflationRate": 300,
+    "burnRate": 500,
+    "treasuryRate": 1000
+  },
+  "addresses": {
+    "admin": "0x0000000000000000000000000000000000000000",
+    "feeRecipient": "0x0000000000000000000000000000000000000000",
+    "treasury": "0x0000000000000000000000000000000000000000"
+  },
+  "verification": {
+    "enabled": true,
+    "apiKey": "POLYGONSCAN_API_KEY"
+  }
+}

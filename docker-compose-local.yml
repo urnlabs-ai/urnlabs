@@ -13,7 +13,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -30,7 +30,7 @@ services:
     image: redis:7-alpine
     container_name: urnlabs-redis-local
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -38,6 +38,48 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+    networks:
+      - urnlabs-network
+
+  # HashiCorp Vault - Secrets Management
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: urnlabs-vault-local
+    ports:
+      - "8200:8200"
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=dev-root-token
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+      - VAULT_ADDR=http://0.0.0.0:8200
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault_data:/vault/data
+      - ./packages/security/vault/config.hcl:/vault/config/vault.hcl:ro
+      - ./packages/security/vault/policies:/vault/policies:ro
+    command: vault server -dev -dev-root-token-id=dev-root-token -dev-listen-address=0.0.0.0:8200
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - urnlabs-network
+
+  # Vault Agent - Secret Injection for Services
+  vault-agent:
+    image: hashicorp/vault:1.15
+    container_name: urnlabs-vault-agent-local
+    depends_on:
+      - vault
+    environment:
+      - VAULT_ADDR=http://vault:8200
+    volumes:
+      - ./packages/security/vault/scripts/vault-agent.hcl:/vault/config/vault-agent.hcl:ro
+      - ./packages/security/vault/templates:/vault/templates:ro
+      - vault_secrets:/vault/secrets
+      - vault_config:/vault/config
+    command: vault agent -config=/vault/config/vault-agent.hcl
     networks:
       - urnlabs-network
 
@@ -60,12 +102,20 @@ services:
       - DASHBOARD_ENDPOINT=http://dashboard:7004
       - MAESTRO_ENDPOINT=http://urn-maestro:7005
       - MONITORING_ENDPOINT=http://monitoring:7006
+      - INTEGRATIONS_ENDPOINT=http://integrations:7010
       - REDIS_URL=redis://redis:6379
+      # Vault integration
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_ROLE_ID=${VAULT_ROLE_ID:-}
+      - VAULT_SECRET_ID=${VAULT_SECRET_ID:-}
+      - USE_VAULT_SECRETS=true
+      # Fallback secrets for development (will be replaced by Vault)
       - JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
     depends_on:
       - api
       - agents
       - bridge
+      - integrations
       - monitoring
       - redis
     volumes:
@@ -150,6 +200,50 @@ services:
     networks:
       - urnlabs-network
 
+  # Agent Registry Service (AI Agent Registry and Discovery System)
+  agent-registry:
+    build:
+      context: .
+      dockerfile: apps/agent-registry/Dockerfile
+      target: development
+    container_name: urnlabs-agent-registry-local
+    ports:
+      - "7003:7003"
+      - "8081:8081"  # WebSocket port for health monitoring
+    environment:
+      - NODE_ENV=development
+      - HOST=0.0.0.0
+      - PORT=7003
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_dev
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
+      - LOG_LEVEL=info
+      - WEBSOCKET_PORT=8081
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - MAX_AGENTS_PER_ORG=100
+      - DEFAULT_LOAD_BALANCING_ALGORITHM=round_robin
+      - AUTO_SCALING_ENABLED=true
+      - PROMETHEUS_ENABLED=true
+      - API_HOST=localhost:7003
+      - FRONTEND_URL=http://localhost:3000
+    depends_on:
+      - postgres
+      - redis
+      - api
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker socket for container orchestration
+      - shared_data:/shared
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
   # API Bridge Service (Go <-> Node.js)
   bridge:
     build:
@@ -158,11 +252,11 @@ services:
       target: dev
     container_name: urnlabs-bridge-local
     ports:
-      - "7003:7003"
+      - "7008:7008"  # Changed from 7003 to avoid conflict
     environment:
       - NODE_ENV=development
       - HOST=0.0.0.0
-      - BRIDGE_PORT=7003
+      - BRIDGE_PORT=7008
       - API_ENDPOINT=http://api:7001
       - AGENTS_ENDPOINT=http://agents:7002
       - GATEWAY_URL=http://gateway:7000
@@ -171,12 +265,62 @@ services:
     depends_on:
       - api
       - agents
-      - urn-maestro
       - redis
     volumes:
       - shared_data:/shared
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7003/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:7008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+  # External Integrations Service (GitHub, Slack, Webhooks, Marketplace)
+  integrations:
+    build:
+      context: .
+      dockerfile: apps/integrations/Dockerfile
+      target: production
+    container_name: urnlabs-integrations-local
+    ports:
+      - "7010:7010"
+    environment:
+      - NODE_ENV=development
+      - HOST=0.0.0.0
+      - PORT=7010
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_dev
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
+      - ENCRYPTION_KEY=your-32-character-encryption-key
+      - GITHUB_APP_ID=${GITHUB_APP_ID}
+      - GITHUB_APP_PRIVATE_KEY=${GITHUB_APP_PRIVATE_KEY}
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - SLACK_CLIENT_ID=${SLACK_CLIENT_ID}
+      - SLACK_CLIENT_SECRET=${SLACK_CLIENT_SECRET}
+      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - JIRA_API_TOKEN=${JIRA_API_TOKEN}
+      - CONFLUENCE_API_TOKEN=${CONFLUENCE_API_TOKEN}
+      - JENKINS_API_TOKEN=${JENKINS_API_TOKEN}
+      - GITLAB_ACCESS_TOKEN=${GITLAB_ACCESS_TOKEN}
+      - GATEWAY_URL=http://gateway:7000
+      - API_ENDPOINT=http://api:7001
+      - AGENTS_ENDPOINT=http://agents:7002
+    depends_on:
+      - postgres
+      - redis
+      - api
+      - agents
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7010/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -213,41 +357,41 @@ services:
     networks:
       - urnlabs-network
 
-  # URN-MAESTRO Go Service
-  urn-maestro:
-    build:
-      context: ../urn-maestro-go
-      dockerfile: Dockerfile
-    container_name: urnlabs-maestro-local
-    ports:
-      - "7005:7005"  # Main HTTP server
-      - "7015:7015"  # MCP server
-    environment:
-      - URN_ENHANCED_MODE=true
-      - URN_HTTP_PORT=7005
-      - URN_MCP_PORT=7015
-      - URN_LOG_LEVEL=info
-      - URN_DATABASE_PATH=/data/urn-maestro.db
-      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - QWEN_API_KEY=${QWEN_API_KEY}
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
-      - JIRA_PAT=${JIRA_PAT}
-      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
-      - NODE_API_ENDPOINT=http://api:7001
-      - NODE_AGENT_ENDPOINT=http://agents:7002
-      - GATEWAY_URL=http://gateway:7000
-    volumes:
-      - maestro_data:/data
-      - shared_data:/shared
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7005/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - urnlabs-network
+  # URN-MAESTRO Go Service (disabled - requires Go 1.23.0, image has 1.22.12)
+  # urn-maestro:
+  #   build:
+  #     context: ../urn-maestro-go
+  #     dockerfile: Dockerfile
+  #   container_name: urnlabs-maestro-local
+  #   ports:
+  #     - "7005:7005"  # Main HTTP server
+  #     - "7015:7015"  # MCP server
+  #   environment:
+  #     - URN_ENHANCED_MODE=true
+  #     - URN_HTTP_PORT=7005
+  #     - URN_MCP_PORT=7015
+  #     - URN_LOG_LEVEL=info
+  #     - URN_DATABASE_PATH=/data/urn-maestro.db
+  #     - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+  #     - GEMINI_API_KEY=${GEMINI_API_KEY}
+  #     - QWEN_API_KEY=${QWEN_API_KEY}
+  #     - GITHUB_TOKEN=${GITHUB_TOKEN}
+  #     - JIRA_PAT=${JIRA_PAT}
+  #     - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+  #     - NODE_API_ENDPOINT=http://api:7001
+  #     - NODE_AGENT_ENDPOINT=http://agents:7002
+  #     - GATEWAY_URL=http://gateway:7000
+  #   volumes:
+  #     - maestro_data:/data
+  #     - shared_data:/shared
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7005/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #   networks:
+  #     - urnlabs-network
 
   # Monitoring & Observability Service
   monitoring:
@@ -259,11 +403,13 @@ services:
     ports:
       - "7006:7006"  # Monitoring dashboard
       - "7016:7016"  # MCP server
+      - "8080:8080"  # WebSocket server for real-time metrics
     environment:
       - NODE_ENV=development
       - HOST=0.0.0.0
       - MONITORING_PORT=7006
       - MONITORING_MCP_PORT=7016
+      - WEBSOCKET_PORT=8080
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_dev
       - REDIS_URL=redis://redis:6379
       - PROMETHEUS_URL=http://prometheus:9090
@@ -373,15 +519,15 @@ services:
       - NODE_ENV=development
       - HOST=0.0.0.0
       - SECURITY_PORT=7009
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_dev
-      - REDIS_URL=redis://redis:6379
-      - VAULT_ADDR=${VAULT_ADDR}
-      - VAULT_TOKEN=${VAULT_TOKEN}
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_ROLE_ID=${VAULT_ROLE_ID}
+      - VAULT_SECRET_ID=${VAULT_SECRET_ID}
       - SONAR_HOST_URL=${SONAR_HOST_URL}
       - SONAR_TOKEN=${SONAR_TOKEN}
       - SNYK_TOKEN=${SNYK_TOKEN}
       - GATEWAY_URL=http://gateway:7000
     depends_on:
+      - vault
       - postgres
       - redis
       - gateway
@@ -441,6 +587,55 @@ services:
     networks:
       - urnlabs-network
 
+  # HashiCorp Vault for Secrets Management
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: urnlabs-vault-local
+    ports:
+      - "8200:8200"
+      - "8201:8201"
+    environment:
+      - VAULT_ADDR=http://0.0.0.0:8200
+      - VAULT_API_ADDR=http://0.0.0.0:8200
+      - VAULT_CLUSTER_ADDR=http://0.0.0.0:8201
+      - VAULT_DEV_ROOT_TOKEN_ID=root
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+    volumes:
+      - vault_data:/vault/data
+      - vault_logs:/vault/logs
+      - ./packages/security/vault/config.hcl:/vault/config/vault.hcl:ro
+      - ./packages/security/vault/policies:/vault/policies:ro
+    cap_add:
+      - IPC_LOCK
+    command: >
+      sh -c '
+        vault server -config=/vault/config/vault.hcl &
+        sleep 10
+        if [ ! -f /vault/data/.initialized ]; then
+          export VAULT_ADDR=http://localhost:8200
+          vault operator init -key-shares=5 -key-threshold=3 > /vault/data/init-keys.txt
+          vault operator unseal $$(grep "Unseal Key 1" /vault/data/init-keys.txt | cut -d" " -f4)
+          vault operator unseal $$(grep "Unseal Key 2" /vault/data/init-keys.txt | cut -d" " -f4)
+          vault operator unseal $$(grep "Unseal Key 3" /vault/data/init-keys.txt | cut -d" " -f4)
+          export VAULT_TOKEN=$$(grep "Initial Root Token" /vault/data/init-keys.txt | cut -d" " -f4)
+          vault auth $$VAULT_TOKEN
+          vault secrets enable -path=secret kv-v2
+          vault policy write app-policy /vault/policies/app-policy.hcl
+          vault policy write admin-policy /vault/policies/admin-policy.hcl
+          vault auth enable approle
+          vault write auth/approle/role/urnlabs-app token_policies="app-policy" token_ttl=1h token_max_ttl=4h bind_secret_id=true
+          touch /vault/data/.initialized
+        fi
+        wait
+      '
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - urnlabs-network
+
   # Web Applications - UrnLabs Website
   urnlabs:
     build:
@@ -458,31 +653,6 @@ services:
       - .:/app
       - /app/node_modules
       - ./worktrees/urnlabs-ai:/app/worktrees/urnlabs-ai
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4321/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - urnlabs-network
-
-  # Web Applications - UsmanRamzan Website
-  usmanramzan:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.astro
-      args:
-        SITE_NAME: usmanramzan-ai
-    container_name: usmanramzan-website-local
-    ports:
-      - "8001:4321"
-    environment:
-      - NODE_ENV=development
-      - SITE_NAME=usmanramzan-ai
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - ./worktrees/usmanramzan-ai:/app/worktrees/usmanramzan-ai
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4321/"]
       interval: 30s
@@ -516,6 +686,67 @@ services:
     networks:
       - urnlabs-network
 
+  # ClickHouse Database for Analytics
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: urnlabs-clickhouse-local
+    ports:
+      - "8123:8123"  # HTTP interface
+      - "9000:9000"  # Native client interface
+    environment:
+      CLICKHOUSE_DB: analytics
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: clickhouse
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./docker/clickhouse-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - urnlabs-network
+
+  # Apache Kafka for Streaming
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: urnlabs-zookeeper-local
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - urnlabs-network
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: urnlabs-kafka-local
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - urnlabs-network
+
   # Nginx Reverse Proxy for Web Applications
   nginx-web:
     image: nginx:alpine
@@ -527,7 +758,6 @@ services:
       - ./docker/nginx-websites.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - urnlabs
-      - usmanramzan
       - usmanramzan-ai
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
@@ -551,6 +781,18 @@ volumes:
   prometheus_data:
     driver: local
   grafana_data:
+    driver: local
+  vault_data:
+    driver: local
+  vault_logs:
+    driver: local
+  vault_secrets:
+    driver: local
+  vault_config:
+    driver: local
+  clickhouse_data:
+    driver: local
+  kafka_data:
     driver: local
 
 networks:

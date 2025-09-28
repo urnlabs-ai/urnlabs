@@ -2,7 +2,7 @@
 import ThemeToggle from './ThemeToggle.jsx';
 ---
 
-<header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+<header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-all duration-300 ease-in-out">
   <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16">
       <!-- Logo -->
@@ -113,7 +113,7 @@ import ThemeToggle from './ThemeToggle.jsx';
           if (target) {
             const headerHeight = document.querySelector('header').offsetHeight;
             const targetPosition = target.offsetTop - headerHeight;
-            
+
             window.scrollTo({
               top: targetPosition,
               behavior: 'smooth'
@@ -121,6 +121,89 @@ import ThemeToggle from './ThemeToggle.jsx';
           }
         });
       });
+
+      // Header scroll effects
+      const header = document.querySelector('header');
+      let lastScrollY = window.scrollY;
+
+      const handleScroll = () => {
+        const currentScrollY = window.scrollY;
+
+        if (currentScrollY > 100) {
+          header?.classList.add('header-scrolled');
+        } else {
+          header?.classList.remove('header-scrolled');
+        }
+
+        // Hide/show header on scroll
+        if (currentScrollY > lastScrollY && currentScrollY > 200) {
+          header?.classList.add('header-hidden');
+        } else {
+          header?.classList.remove('header-hidden');
+        }
+
+        lastScrollY = currentScrollY;
+      };
+
+      // Add scroll listener with throttling
+      let scrollTimer = null;
+      window.addEventListener('scroll', () => {
+        if (scrollTimer) return;
+        scrollTimer = setTimeout(() => {
+          handleScroll();
+          scrollTimer = null;
+        }, 10);
+      }, { passive: true });
     });
   }
 </script>
+
+<style>
+  header.header-scrolled {
+    @apply bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg shadow-lg;
+  }
+
+  header.header-hidden {
+    transform: translateY(-100%);
+  }
+
+  header {
+    will-change: transform;
+  }
+
+  /* Smooth hover effects for navigation links */
+  nav a {
+    position: relative;
+    overflow: hidden;
+  }
+
+  nav a::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, theme('colors.brand.500'), theme('colors.brand.600'));
+    transition: width 0.3s ease;
+  }
+
+  nav a:hover::before {
+    width: 100%;
+  }
+
+  /* Mobile menu slide animations */
+  #mobile-menu {
+    transition: all 0.3s ease-in-out;
+  }
+
+  #mobile-menu.hidden {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  #mobile-menu:not(.hidden) {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>

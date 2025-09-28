@@ -1,0 +1,93 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import Pricing from '~/components/Pricing';
+import Faq from '~/components/Faq';
+---
+
+<BaseLayout
+  title="Pricing - Transparent & Scalable Plans | Urnlabs"
+  description="Choose the right plan for your AI automation needs. Start free, scale as you grow. Enterprise-grade security included in all plans."
+>
+  <main>
+    <!-- Pricing Hero -->
+    <section class="relative overflow-hidden bg-slate-900 py-24 sm:py-32">
+      <div class="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+
+      <div class="relative mx-auto max-w-7xl px-6 lg:px-8">
+        <div class="mx-auto max-w-2xl text-center">
+          <div class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-green-500/10 text-green-400 ring-1 ring-inset ring-green-500/20 mb-8">
+            <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Transparent Pricing
+          </div>
+
+          <h1 class="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+            Pricing that
+            <span class="bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent block mt-2">
+              scales with you
+            </span>
+          </h1>
+
+          <p class="mt-6 text-lg leading-8 text-slate-300 max-w-3xl mx-auto">
+            Start free and only pay for what you use. No hidden fees, no vendor lock-in.
+            Enterprise-grade security and compliance included in all plans.
+          </p>
+
+          <div class="mt-10 flex items-center justify-center gap-x-6">
+            <a
+              href="/contact"
+              class="rounded-md bg-blue-500 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-600 transition-colors"
+            >
+              Start Free Trial
+            </a>
+            <a
+              href="#calculator"
+              class="text-sm font-semibold leading-6 text-slate-300 hover:text-white transition-colors"
+            >
+              Calculate costs <span aria-hidden="true">→</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing Plans -->
+    <Pricing client:load />
+
+    <!-- FAQ Section -->
+    <section class="bg-slate-950 py-24">
+      <div class="container mx-auto px-6 lg:px-8">
+        <Faq client:load />
+      </div>
+    </section>
+
+    <!-- Bottom CTA -->
+    <section class="py-24 bg-slate-900">
+      <div class="container mx-auto px-6 lg:px-8">
+        <div class="bg-gradient-to-r from-blue-500/10 to-green-500/10 rounded-2xl p-12 border border-blue-500/20 text-center">
+          <h2 class="text-3xl font-bold text-white mb-6">
+            Ready to start saving?
+          </h2>
+          <p class="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
+            Join 1000+ teams already using Urnlabs to automate their workflows and boost productivity.
+          </p>
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a
+              href="/contact"
+              class="inline-flex items-center justify-center rounded-md bg-blue-500 px-8 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors"
+            >
+              Start Free Trial
+            </a>
+            <a
+              href="/platform"
+              class="inline-flex items-center text-blue-400 hover:text-blue-300 font-medium transition-colors"
+            >
+              Explore Platform →
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

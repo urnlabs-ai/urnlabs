@@ -61,12 +61,12 @@ const profilesRoutes: FastifyPluginAsync = async (fastify) => {
       const { userId } = request.params;
       
       // Check if user can access this profile (Security Agent requirement)
-      if (request.user.id !== userId && !request.user.isAdmin) {
+      if ((request.user as any).id !== userId && !(request.user as any).isAdmin) {
         return reply.code(403).send({ error: 'Access denied' });
       }
 
       // Database query with proper error handling (Code Reviewer Agent requirement)
-      const profile = await fastify.db.userProfile.findUnique({
+      const profile = await (fastify as any).db.userProfile.findUnique({
         where: { user_id: userId },
       });
 
@@ -79,7 +79,7 @@ const profilesRoutes: FastifyPluginAsync = async (fastify) => {
 
       reply.send({ profile });
     } catch (error) {
-      fastify.log.error('Profile fetch error:', error);
+      fastify.log.error('Profile fetch error:', error as any);
       reply.code(500).send({ error: 'Internal server error' });
     }
   });
@@ -111,10 +111,10 @@ const profilesRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     try {
       const profileData = request.body;
-      const userId = request.user.id;
+      const userId = (request.user as any).id;
 
       // Check if profile already exists
-      const existingProfile = await fastify.db.userProfile.findUnique({
+      const existingProfile = await (fastify as any).db.userProfile.findUnique({
         where: { user_id: userId },
       });
 
@@ -132,19 +132,19 @@ const profilesRoutes: FastifyPluginAsync = async (fastify) => {
       };
 
       // Create profile with transaction for data integrity
-      const profile = await fastify.db.userProfile.create({
+      const profile = await (fastify as any).db.userProfile.create({
         data: sanitizedData,
       });
 
       // Real-time update notification (Architecture Agent design)
-      fastify.io.to(`user:${userId}`).emit('profileCreated', { profile });
+      (fastify as any).io.to(`user:${userId}`).emit('profileCreated', { profile });
 
       // Log creation for audit trail (Deployment Agent requirement)
       fastify.log.info(`Profile created: ${userId}`);
 
       reply.code(201).send({ profile });
     } catch (error) {
-      fastify.log.error('Profile creation error:', error);
+      fastify.log.error('Profile creation error:', error as any);
       reply.code(500).send({ error: 'Internal server error' });
     }
   });
@@ -181,15 +181,15 @@ const profilesRoutes: FastifyPluginAsync = async (fastify) => {
       const updateData = request.body;
 
       // Security check - user can only update own profile
-      if (request.user.id !== userId) {
+      if ((request.user as any).id !== userId) {
         return reply.code(403).send({ error: 'Access denied' });
       }
 
       // Rate limiting check (Security Agent requirement)
       const rateLimitKey = `profile_update:${userId}`;
-      const updateCount = await fastify.redis.incr(rateLimitKey);
+      const updateCount = await (fastify as any).redis.incr(rateLimitKey);
       if (updateCount === 1) {
-        await fastify.redis.expire(rateLimitKey, 3600); // 1 hour window
+        await (fastify as any).redis.expire(rateLimitKey, 3600); // 1 hour window
       }
       if (updateCount > 10) { // Max 10 updates per hour
         return reply.code(429).send({ error: 'Rate limit exceeded' });
@@ -205,23 +205,23 @@ const profilesRoutes: FastifyPluginAsync = async (fastify) => {
       };
 
       // Update with optimistic locking
-      const profile = await fastify.db.userProfile.update({
+      const _profile = await (fastify as any).db.userProfile.update({
         where: { user_id: userId },
         data: sanitizedData,
       });
 
       // Real-time update notification
-      fastify.io.to(`user:${userId}`).emit('profileUpdated', { profile });
+      (fastify as any).io.to(`user:${userId}`).emit('profileUpdated', { profile });
 
       // Log update for monitoring
-      fastify.log.info(`Profile updated: ${userId}`, { changes: Object.keys(updateData) });
+      fastify.log.info(`Profile updated: ${userId} with changes: ${Object.keys(updateData).join(', ')}`);
 
       reply.send({ profile });
     } catch (error) {
-      if (error.code === 'P2025') { // Prisma not found error
+      if ((error as any).code === 'P2025') { // Prisma not found error
         return reply.code(404).send({ error: 'Profile not found' });
       }
-      fastify.log.error('Profile update error:', error);
+      fastify.log.error('Profile update error:', error as any);
       reply.code(500).send({ error: 'Internal server error' });
     }
   });
@@ -243,31 +243,31 @@ const profilesRoutes: FastifyPluginAsync = async (fastify) => {
       const { userId } = request.params;
 
       // Security check - user can only delete own profile
-      if (request.user.id !== userId) {
+      if ((request.user as any).id !== userId) {
         return reply.code(403).send({ error: 'Access denied' });
       }
 
       // Soft delete for data recovery (Architecture Agent design)
-      const profile = await fastify.db.userProfile.update({
+      const _profile = await (fastify as any).db.userProfile.update({
         where: { user_id: userId },
-        data: { 
+        data: {
           deleted_at: new Date(),
           updated_at: new Date(),
         },
       });
 
       // Real-time notification
-      fastify.io.to(`user:${userId}`).emit('profileDeleted', { userId });
+      (fastify as any).io.to(`user:${userId}`).emit('profileDeleted', { userId });
 
       // Log deletion for audit trail
       fastify.log.info(`Profile deleted: ${userId}`);
 
       reply.send({ message: 'Profile deleted successfully' });
     } catch (error) {
-      if (error.code === 'P2025') {
+      if ((error as any).code === 'P2025') {
         return reply.code(404).send({ error: 'Profile not found' });
       }
-      fastify.log.error('Profile deletion error:', error);
+      fastify.log.error('Profile deletion error:', error as any);
       reply.code(500).send({ error: 'Internal server error' });
     }
   });

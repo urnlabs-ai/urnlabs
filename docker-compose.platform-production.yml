@@ -1,0 +1,581 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database - Production (Master)
+  postgres-primary:
+    image: postgres:15
+    container_name: urnlabs-postgres-primary
+    environment:
+      POSTGRES_DB: ${PRODUCTION_DB_NAME}
+      POSTGRES_USER: ${PRODUCTION_DB_USER}
+      POSTGRES_PASSWORD: ${PRODUCTION_DB_PASSWORD}
+      POSTGRES_REPLICATION_USER: ${PRODUCTION_REPLICATION_USER}
+      POSTGRES_REPLICATION_PASSWORD: ${PRODUCTION_REPLICATION_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_primary_data:/var/lib/postgresql/data
+      - ./postgres/postgresql.production.conf:/etc/postgresql/postgresql.conf
+      - ./postgres/pg_hba.production.conf:/etc/postgresql/pg_hba.conf
+      - ./apps/api/prisma/migrations:/docker-entrypoint-initdb.d
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    networks:
+      - urnlabs-platform-production
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PRODUCTION_DB_USER} -d ${PRODUCTION_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+      placement:
+        constraints:
+          - node.role == manager
+
+  # PostgreSQL Database - Production (Read Replica)
+  postgres-replica:
+    image: postgres:15
+    container_name: urnlabs-postgres-replica
+    environment:
+      POSTGRES_DB: ${PRODUCTION_DB_NAME}
+      POSTGRES_USER: ${PRODUCTION_DB_USER}
+      POSTGRES_PASSWORD: ${PRODUCTION_DB_PASSWORD}
+      POSTGRES_MASTER_SERVICE: postgres-primary
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+      - ./postgres/postgresql.replica.conf:/etc/postgresql/postgresql.conf
+    networks:
+      - urnlabs-platform-production
+    depends_on:
+      - postgres-primary
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PRODUCTION_DB_USER} -d ${PRODUCTION_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+      replicas: 2
+
+  # Redis Cluster - Production
+  redis-master:
+    image: redis:7-alpine
+    container_name: urnlabs-redis-master
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_master_data:/data
+      - ./redis/redis.production.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - urnlabs-platform-production
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+
+  redis-replica:
+    image: redis:7-alpine
+    container_name: urnlabs-redis-replica
+    volumes:
+      - redis_replica_data:/data
+      - ./redis/redis.replica.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    depends_on:
+      - redis-master
+    networks:
+      - urnlabs-platform-production
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+      replicas: 2
+
+  # API Service - Production
+  api-production:
+    image: ghcr.io/${GITHUB_REPOSITORY}-api:${IMAGE_TAG}
+    env_file:
+      - .github/environments/production.env
+    environment:
+      DATABASE_URL: ${PRODUCTION_DATABASE_URL}
+      DATABASE_READ_URL: ${PRODUCTION_DATABASE_READ_URL}
+      REDIS_URL: redis://redis-master:6379
+    ports:
+      - "7001:7001"
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+      redis-master:
+        condition: service_healthy
+    networks:
+      - urnlabs-platform-production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 30s
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # Agents Service - Production
+  agents-production:
+    image: ghcr.io/${GITHUB_REPOSITORY}-agents:${IMAGE_TAG}
+    env_file:
+      - .github/environments/production.env
+    ports:
+      - "7002:7002"
+    depends_on:
+      - api-production
+    networks:
+      - urnlabs-platform-production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 30s
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # Gateway Service - Production
+  gateway-production:
+    image: ghcr.io/${GITHUB_REPOSITORY}-gateway:${IMAGE_TAG}
+    env_file:
+      - .github/environments/production.env
+    ports:
+      - "7000:7000"
+    depends_on:
+      - api-production
+      - agents-production
+    networks:
+      - urnlabs-platform-production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 30s
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # Bridge Service - Production
+  bridge-production:
+    image: ghcr.io/${GITHUB_REPOSITORY}-bridge:${IMAGE_TAG}
+    env_file:
+      - .github/environments/production.env
+    ports:
+      - "7003:7003"
+    depends_on:
+      - gateway-production
+    networks:
+      - urnlabs-platform-production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # Dashboard Service - Production
+  dashboard-production:
+    image: ghcr.io/${GITHUB_REPOSITORY}-dashboard:${IMAGE_TAG}
+    env_file:
+      - .github/environments/production.env
+    ports:
+      - "7004:7004"
+    depends_on:
+      - gateway-production
+    networks:
+      - urnlabs-platform-production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7004/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # Load Balancer - Production
+  nginx-production:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.production.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl/production:/etc/ssl/certs:ro
+    depends_on:
+      - gateway-production
+      - dashboard-production
+    networks:
+      - urnlabs-platform-production
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+
+  # Prometheus - Production Monitoring
+  prometheus-production:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/configs/prometheus:/etc/prometheus:ro
+      - ./monitoring/rules:/etc/prometheus/rules:ro
+      - prometheus_production_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=90d'
+      - '--storage.tsdb.retention.size=50GB'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--web.external-url=https://metrics.urnlabs.ai'
+    networks:
+      - urnlabs-platform-production
+      - urnlabs-monitoring-production
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: '2.0'
+        reservations:
+          memory: 4G
+          cpus: '1.0'
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana - Production Monitoring
+  grafana-production:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_production_data:/var/lib/grafana
+      - ./monitoring/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/configs/grafana:/etc/grafana/provisioning:ro
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_SECURITY_ALLOW_EMBEDDING: false
+      GF_AUTH_ANONYMOUS_ENABLED: false
+      GF_ANALYTICS_REPORTING_ENABLED: false
+      GF_ANALYTICS_CHECK_FOR_UPDATES: false
+      GF_SECURITY_DISABLE_GRAVATAR: true
+      GF_INSTALL_PLUGINS: grafana-piechart-panel,grafana-worldmap-panel
+      GF_EXTERNAL_URL: https://dashboards.urnlabs.ai
+    depends_on:
+      - prometheus-production
+    networks:
+      - urnlabs-platform-production
+      - urnlabs-monitoring-production
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Alertmanager - Production Alerting
+  alertmanager-production:
+    image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/configs/alertmanager:/etc/alertmanager:ro
+      - alertmanager_production_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=https://alerts.urnlabs.ai'
+      - '--cluster.advertise-address=0.0.0.0:9093'
+    environment:
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL}
+    networks:
+      - urnlabs-monitoring-production
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Node Exporter - System Metrics
+  node-exporter-production:
+    image: prom/node-exporter:latest
+    ports:
+      - "9100:9100"
+    volumes:
+      - '/:/host:ro,rslave'
+    command:
+      - '--path.rootfs=/host'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - urnlabs-monitoring-production
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+  # Postgres Exporter - Database Metrics
+  postgres-exporter-production:
+    image: prometheuscommunity/postgres-exporter:latest
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${PRODUCTION_DB_USER}:${PRODUCTION_DB_PASSWORD}@postgres-primary:5432/${PRODUCTION_DB_NAME}?sslmode=disable"
+      PG_EXPORTER_INCLUDE_DATABASES: "${PRODUCTION_DB_NAME}"
+      PG_EXPORTER_AUTO_DISCOVER_DATABASES: "true"
+      PG_EXPORTER_EXCLUDE_DATABASES: "template0,template1"
+    ports:
+      - "9187:9187"
+    depends_on:
+      - postgres-primary
+    networks:
+      - urnlabs-platform-production
+      - urnlabs-monitoring-production
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9187/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Exporter - Cache Metrics
+  redis-exporter-production:
+    image: oliver006/redis_exporter:latest
+    environment:
+      REDIS_ADDR: "redis://redis-master:6379"
+      REDIS_EXPORTER_INCLUDE_SYSTEM_METRICS: "true"
+    ports:
+      - "9121:9121"
+    depends_on:
+      - redis-master
+    networks:
+      - urnlabs-platform-production
+      - urnlabs-monitoring-production
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.1'
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9121/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # cAdvisor - Container Metrics
+  cadvisor-production:
+    image: gcr.io/cadvisor/cadvisor:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    networks:
+      - urnlabs-monitoring-production
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+volumes:
+  postgres_primary_data:
+  postgres_replica_data:
+  redis_master_data:
+  redis_replica_data:
+  prometheus_production_data:
+  grafana_production_data:
+  alertmanager_production_data:
+
+networks:
+  urnlabs-platform-production:
+    driver: overlay
+    name: urnlabs-platform-production-network
+    attachable: true
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  urnlabs-monitoring-production:
+    driver: overlay
+    name: urnlabs-monitoring-production-network
+    attachable: true
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

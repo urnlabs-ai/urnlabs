@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urnlabs Performance Monitoring Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8fafc;
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        .dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            color: #1e293b;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #64748b;
+            font-size: 16px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #3b82f6;
+        }
+
+        .metric-card.warning {
+            border-left-color: #f59e0b;
+        }
+
+        .metric-card.critical {
+            border-left-color: #ef4444;
+        }
+
+        .metric-card.success {
+            border-left-color: #10b981;
+        }
+
+        .metric-title {
+            font-size: 14px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .metric-change {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .metric-change.positive {
+            color: #10b981;
+        }
+
+        .metric-change.negative {
+            color: #ef4444;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .chart-card {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 16px;
+        }
+
+        .alerts-section {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+        }
+
+        .alerts-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 16px;
+        }
+
+        .alert-item {
+            padding: 12px 16px;
+            border-left: 4px solid #ef4444;
+            background-color: #fef2f2;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .alert-item.warning {
+            border-left-color: #f59e0b;
+            background-color: #fffbeb;
+        }
+
+        .alert-item.info {
+            border-left-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+
+        .alert-severity {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .alert-message {
+            font-size: 14px;
+            color: #374151;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .connection-status.connected {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .connection-status.disconnected {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                padding: 12px;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metric-value {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="connection-status" id="connectionStatus">Connecting...</div>
+
+        <div class="header">
+            <h1>Performance Monitoring Dashboard</h1>
+            <p>Real-time system metrics and performance analytics</p>
+        </div>
+
+        <div class="metrics-grid" id="metricsGrid">
+            <div class="loading">Loading metrics...</div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-title">API Response Time</div>
+                <canvas id="responseTimeChart" width="400" height="200"></canvas>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">System Performance</div>
+                <canvas id="systemChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <div class="alerts-section">
+            <div class="alerts-title">Active Alerts</div>
+            <div id="alertsList">
+                <div class="loading">Loading alerts...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class MonitoringDashboard {
+            constructor() {
+                this.ws = null;
+                this.charts = {};
+                this.reconnectInterval = 5000;
+                this.maxDataPoints = 20;
+                this.responseTimeData = [];
+                this.systemData = [];
+
+                this.initializeCharts();
+                this.connectWebSocket();
+                this.fetchInitialData();
+            }
+
+            connectWebSocket() {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.hostname}:8080`;
+
+                try {
+                    this.ws = new WebSocket(wsUrl);
+
+                    this.ws.onopen = () => {
+                        console.log('WebSocket connected');
+                        this.updateConnectionStatus('connected');
+
+                        // Subscribe to metrics
+                        this.ws.send(JSON.stringify({
+                            type: 'subscribe',
+                            subscription: { type: 'metrics' }
+                        }));
+
+                        // Subscribe to alerts
+                        this.ws.send(JSON.stringify({
+                            type: 'subscribe',
+                            subscription: { type: 'alerts' }
+                        }));
+                    };
+
+                    this.ws.onmessage = (event) => {
+                        try {
+                            const message = JSON.parse(event.data);
+                            this.handleWebSocketMessage(message);
+                        } catch (error) {
+                            console.error('Error parsing WebSocket message:', error);
+                        }
+                    };
+
+                    this.ws.onclose = () => {
+                        console.log('WebSocket disconnected');
+                        this.updateConnectionStatus('disconnected');
+                        setTimeout(() => this.connectWebSocket(), this.reconnectInterval);
+                    };
+
+                    this.ws.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                        this.updateConnectionStatus('disconnected');
+                    };
+                } catch (error) {
+                    console.error('Failed to connect WebSocket:', error);
+                    this.updateConnectionStatus('disconnected');
+                    setTimeout(() => this.connectWebSocket(), this.reconnectInterval);
+                }
+            }
+
+            handleWebSocketMessage(message) {
+                switch (message.type) {
+                    case 'metrics_update':
+                        this.updateMetrics(message.data);
+                        break;
+                    case 'alerts_update':
+                        this.updateAlerts(message.data);
+                        break;
+                    case 'connected':
+                        console.log('Dashboard connected:', message.data);
+                        break;
+                    default:
+                        console.log('Unknown message type:', message.type);
+                }
+            }
+
+            async fetchInitialData() {
+                try {
+                    // Fetch current metrics
+                    const metricsResponse = await fetch('/metrics/realtime');
+                    const metricsData = await metricsResponse.json();
+                    this.updateMetrics(metricsData.metrics);
+
+                    // Fetch alerts
+                    const alertsResponse = await fetch('/alerts');
+                    const alertsData = await alertsResponse.json();
+                    this.updateAlerts(alertsData);
+                } catch (error) {
+                    console.error('Failed to fetch initial data:', error);
+                }
+            }
+
+            updateConnectionStatus(status) {
+                const statusElement = document.getElementById('connectionStatus');
+                statusElement.textContent = status === 'connected' ? 'Connected' : 'Disconnected';
+                statusElement.className = `connection-status ${status}`;
+            }
+
+            updateMetrics(metrics) {
+                if (!metrics) return;
+
+                const grid = document.getElementById('metricsGrid');
+
+                // Extract latest values
+                const apiResponseTime = this.getLatestValue(metrics.api?.responseTime) || 0;
+                const apiErrorRate = this.getLatestValue(metrics.api?.errorRate) || 0;
+                const agentSuccessRate = this.getLatestValue(metrics.agents?.successRate) || 0;
+                const systemMemory = this.getLatestValue(metrics.system?.memory) || 0;
+
+                // Update metric cards
+                grid.innerHTML = `
+                    <div class="metric-card ${this.getMetricStatus(apiResponseTime, 2000)}">
+                        <div class="metric-title">API Response Time</div>
+                        <div class="metric-value">${Math.round(apiResponseTime)}ms</div>
+                        <div class="metric-change">Target: <2000ms</div>
+                    </div>
+                    <div class="metric-card ${this.getMetricStatus(apiErrorRate, 5, true)}">
+                        <div class="metric-title">Error Rate</div>
+                        <div class="metric-value">${apiErrorRate.toFixed(1)}%</div>
+                        <div class="metric-change">Target: <5%</div>
+                    </div>
+                    <div class="metric-card ${this.getMetricStatus(agentSuccessRate, 90, false, true)}">
+                        <div class="metric-title">Agent Success Rate</div>
+                        <div class="metric-value">${agentSuccessRate.toFixed(1)}%</div>
+                        <div class="metric-change">Target: >90%</div>
+                    </div>
+                    <div class="metric-card ${this.getMetricStatus(systemMemory, 80)}">
+                        <div class="metric-title">Memory Usage</div>
+                        <div class="metric-value">${Math.round(systemMemory)}MB</div>
+                        <div class="metric-change">System resources</div>
+                    </div>
+                `;
+
+                // Update charts
+                this.updateCharts(metrics);
+            }
+
+            getLatestValue(metricArray) {
+                if (!Array.isArray(metricArray) || metricArray.length === 0) return 0;
+                const latest = metricArray[metricArray.length - 1];
+                return typeof latest === 'object' ? latest.value : latest;
+            }
+
+            getMetricStatus(value, threshold, isError = false, isReverse = false) {
+                if (isReverse) {
+                    return value >= threshold ? 'success' : 'warning';
+                }
+                if (isError) {
+                    return value >= threshold ? 'critical' : 'success';
+                }
+                return value >= threshold ? 'warning' : 'success';
+            }
+
+            updateCharts(metrics) {
+                const timestamp = new Date().toLocaleTimeString();
+
+                // Update response time chart
+                const responseTime = this.getLatestValue(metrics.api?.responseTime) || 0;
+                this.responseTimeData.push({ x: timestamp, y: responseTime });
+                if (this.responseTimeData.length > this.maxDataPoints) {
+                    this.responseTimeData.shift();
+                }
+
+                // Update system chart
+                const memory = this.getLatestValue(metrics.system?.memory) || 0;
+                this.systemData.push({ x: timestamp, y: memory });
+                if (this.systemData.length > this.maxDataPoints) {
+                    this.systemData.shift();
+                }
+
+                // Update Chart.js charts
+                if (this.charts.responseTime) {
+                    this.charts.responseTime.data.datasets[0].data = this.responseTimeData;
+                    this.charts.responseTime.update('none');
+                }
+
+                if (this.charts.system) {
+                    this.charts.system.data.datasets[0].data = this.systemData;
+                    this.charts.system.update('none');
+                }
+            }
+
+            updateAlerts(alertsData) {
+                const alertsList = document.getElementById('alertsList');
+
+                const monitoringAlerts = alertsData.monitoring || [];
+                const governanceAlerts = alertsData.governance || [];
+                const allAlerts = [...monitoringAlerts, ...governanceAlerts];
+
+                if (allAlerts.length === 0) {
+                    alertsList.innerHTML = '<div style="color: #10b981; text-align: center; padding: 20px;">No active alerts</div>';
+                    return;
+                }
+
+                const alertsHtml = allAlerts.map(alert => `
+                    <div class="alert-item ${this.getAlertClass(alert.severity)}">
+                        <div class="alert-severity">${alert.severity || 'info'}</div>
+                        <div class="alert-message">${alert.message || alert.description || 'Alert'}</div>
+                    </div>
+                `).join('');
+
+                alertsList.innerHTML = alertsHtml;
+            }
+
+            getAlertClass(severity) {
+                switch (severity?.toLowerCase()) {
+                    case 'critical':
+                    case 'high':
+                        return '';
+                    case 'medium':
+                    case 'warning':
+                        return 'warning';
+                    default:
+                        return 'info';
+                }
+            }
+
+            initializeCharts() {
+                // Response Time Chart
+                const responseTimeCtx = document.getElementById('responseTimeChart').getContext('2d');
+                this.charts.responseTime = new Chart(responseTimeCtx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Response Time (ms)',
+                            data: this.responseTimeData,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                type: 'category',
+                                title: { display: true, text: 'Time' }
+                            },
+                            y: {
+                                title: { display: true, text: 'Milliseconds' },
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+
+                // System Chart
+                const systemCtx = document.getElementById('systemChart').getContext('2d');
+                this.charts.system = new Chart(systemCtx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Memory Usage (MB)',
+                            data: this.systemData,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                type: 'category',
+                                title: { display: true, text: 'Time' }
+                            },
+                            y: {
+                                title: { display: true, text: 'Megabytes' },
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new MonitoringDashboard();
+        });
+    </script>
+</body>
+</html>

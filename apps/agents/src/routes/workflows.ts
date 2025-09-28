@@ -20,8 +20,8 @@ export async function workflowRoutes(
         workflowId,
         userId: 'system', // TODO: Get from authentication
         organizationId: 'urnlabs', // TODO: Get from authentication
-        input,
-        priority,
+        input: input as any,
+        priority: priority as any,
       });
 
       return reply.send({

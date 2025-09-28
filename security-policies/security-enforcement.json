@@ -1,0 +1,365 @@
+{
+  "securityPolicyEnforcement": {
+    "version": "1.0.0",
+    "lastUpdated": "2024-01-15T00:00:00Z",
+    "enforcementMode": "strict",
+
+    "httpSecurityHeaders": {
+      "enforced": true,
+      "headers": {
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "X-XSS-Protection": "1; mode=block",
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https:; frame-ancestors 'none'",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()"
+      },
+      "customHeaders": {
+        "X-Powered-By": null,
+        "Server": "Urnlabs-Platform"
+      }
+    },
+
+    "authenticationPolicies": {
+      "enforced": true,
+      "passwordPolicy": {
+        "minLength": 12,
+        "requireUppercase": true,
+        "requireLowercase": true,
+        "requireNumbers": true,
+        "requireSpecialChars": true,
+        "maxAge": 90,
+        "historyCount": 12,
+        "complexityScore": 3
+      },
+      "sessionManagement": {
+        "maxAge": 28800,
+        "idleTimeout": 3600,
+        "regenerateOnAuth": true,
+        "secureCookies": true,
+        "httpOnlyCookies": true,
+        "sameSite": "strict",
+        "maxConcurrentSessions": 3
+      },
+      "accountLockout": {
+        "enabled": true,
+        "maxAttempts": 5,
+        "lockoutDuration": 1800,
+        "progressiveDelay": true
+      },
+      "multiFactorAuth": {
+        "required": true,
+        "methods": ["totp", "sms", "email"],
+        "backupCodes": true,
+        "adminRequired": true
+      }
+    },
+
+    "rateLimiting": {
+      "enforced": true,
+      "global": {
+        "requestsPerMinute": 1000,
+        "burstLimit": 50,
+        "windowSize": 60
+      },
+      "perIP": {
+        "requestsPerMinute": 100,
+        "burstLimit": 20,
+        "windowSize": 60
+      },
+      "authentication": {
+        "attemptsPerMinute": 5,
+        "burstLimit": 2,
+        "windowSize": 60
+      },
+      "api": {
+        "requestsPerMinute": 200,
+        "burstLimit": 30,
+        "windowSize": 60
+      }
+    },
+
+    "dataProtection": {
+      "enforced": true,
+      "encryption": {
+        "algorithm": "AES-256-GCM",
+        "keyRotationDays": 90,
+        "keyEscrow": true,
+        "saltRounds": 12
+      },
+      "piiHandling": {
+        "anonymization": true,
+        "pseudonymization": true,
+        "retentionDays": 2555,
+        "automaticDeletion": true,
+        "consentRequired": true
+      },
+      "backupSecurity": {
+        "encryption": true,
+        "offsite": true,
+        "integrity": true,
+        "retention": 2555
+      }
+    },
+
+    "accessControl": {
+      "enforced": true,
+      "rbac": {
+        "enabled": true,
+        "strictMode": true,
+        "inheritanceBlocked": false
+      },
+      "principleOfLeastPrivilege": true,
+      "regularReviewDays": 90,
+      "privilegedAccountMonitoring": true,
+      "breakGlassProcedures": true,
+      "roles": {
+        "admin": {
+          "permissions": ["*"],
+          "requireMFA": true,
+          "sessionTimeout": 3600,
+          "approvalRequired": true
+        },
+        "user": {
+          "permissions": ["read", "create", "update:own"],
+          "requireMFA": false,
+          "sessionTimeout": 28800,
+          "approvalRequired": false
+        },
+        "guest": {
+          "permissions": ["read:public"],
+          "requireMFA": false,
+          "sessionTimeout": 1800,
+          "approvalRequired": false
+        }
+      }
+    },
+
+    "auditLogging": {
+      "enforced": true,
+      "logLevel": "INFO",
+      "retentionYears": 7,
+      "realTimeMonitoring": true,
+      "encryptLogs": true,
+      "immutableLogs": true,
+      "events": {
+        "authentication": {
+          "login": true,
+          "logout": true,
+          "failedLogin": true,
+          "passwordChange": true,
+          "mfaEvents": true
+        },
+        "authorization": {
+          "privilegeEscalation": true,
+          "accessDenied": true,
+          "roleChanges": true,
+          "permissionChanges": true
+        },
+        "dataAccess": {
+          "piiAccess": true,
+          "sensitiveDataAccess": true,
+          "dataExport": true,
+          "dataModification": true,
+          "dataDelition": true
+        },
+        "systemEvents": {
+          "configurationChanges": true,
+          "serviceStartStop": true,
+          "errorEvents": true,
+          "performanceIssues": true
+        },
+        "securityEvents": {
+          "suspiciousActivity": true,
+          "securityPolicyViolations": true,
+          "vulnerabilityDetection": true,
+          "intrusionAttempts": true
+        }
+      }
+    },
+
+    "incidentResponse": {
+      "enforced": true,
+      "autoResponse": {
+        "suspiciousActivity": {
+          "action": "block",
+          "duration": 3600,
+          "escalate": true
+        },
+        "bruteForceAttack": {
+          "action": "temporary_ban",
+          "duration": 7200,
+          "escalate": true
+        },
+        "dataLeakage": {
+          "action": "alert",
+          "escalate": true,
+          "immediate": true
+        },
+        "malwareDetection": {
+          "action": "quarantine",
+          "escalate": true,
+          "immediate": true
+        }
+      },
+      "alerting": {
+        "channels": ["slack", "email", "webhook"],
+        "severityLevels": {
+          "critical": {
+            "responseTime": 15,
+            "escalationTime": 30,
+            "notificationChannels": ["slack", "email", "sms"]
+          },
+          "high": {
+            "responseTime": 60,
+            "escalationTime": 120,
+            "notificationChannels": ["slack", "email"]
+          },
+          "medium": {
+            "responseTime": 240,
+            "escalationTime": 480,
+            "notificationChannels": ["slack"]
+          },
+          "low": {
+            "responseTime": 1440,
+            "escalationTime": 2880,
+            "notificationChannels": ["email"]
+          }
+        }
+      }
+    },
+
+    "complianceValidation": {
+      "enforced": true,
+      "frameworks": {
+        "gdpr": {
+          "enabled": true,
+          "consentTracking": true,
+          "dataPortability": true,
+          "rightToBeForgotten": true,
+          "privacyByDesign": true
+        },
+        "ccpa": {
+          "enabled": true,
+          "doNotSell": true,
+          "consumerRights": true,
+          "disclosureTracking": true
+        },
+        "soc2": {
+          "enabled": true,
+          "trustServicesCriteria": ["security", "availability", "confidentiality", "privacy"],
+          "controlObjectives": true,
+          "evidenceCollection": true
+        },
+        "iso27001": {
+          "enabled": true,
+          "informationSecurityManagement": true,
+          "riskAssessment": true,
+          "continualImprovement": true
+        },
+        "pciDss": {
+          "enabled": false,
+          "level": 1,
+          "quarterlyScans": true,
+          "annualAssessment": true
+        },
+        "hipaa": {
+          "enabled": false,
+          "businessAssociateAgreement": false,
+          "minimumNecessary": true,
+          "safeguards": ["administrative", "physical", "technical"]
+        }
+      },
+      "validation": {
+        "frequency": "daily",
+        "reportGeneration": true,
+        "nonComplianceAction": "alert_and_block",
+        "evidenceRetention": true
+      }
+    },
+
+    "securityMonitoring": {
+      "enforced": true,
+      "realTimeScanning": true,
+      "vulnerabilityScanning": {
+        "frequency": "daily",
+        "types": ["dependencies", "container", "infrastructure", "application"],
+        "severityThreshold": "medium",
+        "autoRemediation": false
+      },
+      "threatDetection": {
+        "enabled": true,
+        "ml_based": true,
+        "signatureBased": true,
+        "behavioralAnalysis": true,
+        "threatIntelligence": true
+      },
+      "performanceMonitoring": {
+        "enabled": true,
+        "metrics": ["response_time", "throughput", "error_rate", "resource_usage"],
+        "alertThresholds": {
+          "responseTime": 1000,
+          "errorRate": 0.01,
+          "cpuUsage": 0.8,
+          "memoryUsage": 0.8
+        }
+      }
+    },
+
+    "networkSecurity": {
+      "enforced": true,
+      "tlsVersion": "1.3",
+      "cipherSuites": [
+        "TLS_AES_256_GCM_SHA384",
+        "TLS_CHACHA20_POLY1305_SHA256",
+        "TLS_AES_128_GCM_SHA256"
+      ],
+      "firewall": {
+        "enabled": true,
+        "defaultDeny": true,
+        "allowRules": [
+          {"port": 80, "protocol": "HTTP", "source": "public"},
+          {"port": 443, "protocol": "HTTPS", "source": "public"},
+          {"port": 22, "protocol": "SSH", "source": "management"}
+        ]
+      },
+      "ddosProtection": {
+        "enabled": true,
+        "threshold": 1000,
+        "blockDuration": 3600
+      }
+    },
+
+    "containerSecurity": {
+      "enforced": true,
+      "imageScanning": true,
+      "vulnerabilityThreshold": "high",
+      "nonRootUser": true,
+      "readOnlyFilesystem": false,
+      "privilegedContainers": false,
+      "networkPolicies": true,
+      "resourceLimits": true,
+      "secretsManagement": true
+    },
+
+    "environmentSpecific": {
+      "development": {
+        "enforcementLevel": "lenient",
+        "debugLogging": true,
+        "skipSomeChecks": ["performance", "rate_limiting"]
+      },
+      "staging": {
+        "enforcementLevel": "moderate",
+        "debugLogging": false,
+        "skipSomeChecks": []
+      },
+      "production": {
+        "enforcementLevel": "strict",
+        "debugLogging": false,
+        "skipSomeChecks": [],
+        "additionalControls": ["waf", "ddos_protection", "advanced_threat_detection"]
+      }
+    }
+  }
+}

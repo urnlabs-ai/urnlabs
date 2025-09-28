@@ -305,7 +305,7 @@ export class ResourceManager extends EventEmitter {
   stop(): void {
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
-      this.monitoringInterval = undefined;
+      this.monitoringInterval = undefined as any;
     }
 
     logger.info('Resource monitoring stopped');

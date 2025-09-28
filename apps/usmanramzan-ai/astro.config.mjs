@@ -9,7 +9,7 @@ export default defineConfig({
   integrations: [
     react(),
     tailwind({
-      applyBaseStyles: false,
+      configFile: './tailwind.config.js',
     })
   ],
   output: 'static',

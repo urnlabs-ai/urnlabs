@@ -130,3 +130,11 @@ shared_data/
 
 # Test coverage
 coverage/
+
+dev-debug.log
+.vscode
+# OS specific
+
+# Task files
+# tasks.json
+# tasks/ 

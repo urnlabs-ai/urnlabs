@@ -1,0 +1,35 @@
+{
+  "network": "sepolia",
+  "urnToken": {
+    "name": "Urn Token (Testnet)",
+    "symbol": "URN",
+    "initialSupply": "1000000"
+  },
+  "yieldFarm": {
+    "urnPerBlock": "10",
+    "bonusBlocks": 5000,
+    "emergencyWithdrawFee": 500
+  },
+  "liquidityManager": {
+    "positionManager": "0x1238536071E1c677A632429e3655c799b22cDA52",
+    "swapRouter": "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
+    "quoter": "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3",
+    "managementFee": 200
+  },
+  "rewardDistributor": {
+    "rewardPerSecond": "1",
+    "durationDays": 90,
+    "inflationRate": 1000,
+    "burnRate": 500,
+    "treasuryRate": 1500
+  },
+  "addresses": {
+    "admin": "0x0000000000000000000000000000000000000000",
+    "feeRecipient": "0x0000000000000000000000000000000000000000",
+    "treasury": "0x0000000000000000000000000000000000000000"
+  },
+  "verification": {
+    "enabled": true,
+    "apiKey": "ETHERSCAN_API_KEY"
+  }
+}

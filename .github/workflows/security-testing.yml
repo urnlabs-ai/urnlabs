@@ -1,0 +1,304 @@
+name: Security Testing Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      security_level:
+        description: 'Security test level (basic, comprehensive, full)'
+        required: true
+        default: 'comprehensive'
+        type: choice
+        options:
+        - basic
+        - comprehensive
+        - full
+
+env:
+  NODE_VERSION: '18'
+  SECURITY_SCAN_LEVEL: ${{ github.event.inputs.security_level || 'comprehensive' }}
+
+jobs:
+  security-gates:
+    name: Security Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    outputs:
+      security-score: ${{ steps.security-check.outputs.score }}
+      compliance-status: ${{ steps.compliance-check.outputs.status }}
+      vulnerability-count: ${{ steps.vulnerability-scan.outputs.count }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        npm ci
+        npm run build:packages
+
+    - name: Security Dependencies Check
+      id: deps-check
+      run: |
+        npm audit --audit-level=moderate --json > security-audit.json || true
+        VULNERABILITIES=$(cat security-audit.json | jq '.metadata.vulnerabilities.total // 0')
+        echo "vulnerabilities=$VULNERABILITIES" >> $GITHUB_OUTPUT
+
+        if [ "$VULNERABILITIES" -gt 10 ]; then
+          echo "❌ Too many vulnerabilities found: $VULNERABILITIES"
+          exit 1
+        fi
+
+    - name: Static Security Analysis
+      id: static-analysis
+      run: |
+        # Run ESLint security rules
+        npm run lint:security || true
+
+        # Run Semgrep for security patterns
+        npx semgrep --config=auto --json --output=semgrep-results.json . || true
+
+        ISSUES=$(cat semgrep-results.json | jq '.results | length')
+        echo "issues=$ISSUES" >> $GITHUB_OUTPUT
+
+        if [ "$ISSUES" -gt 5 ]; then
+          echo "❌ Too many security issues found: $ISSUES"
+          exit 1
+        fi
+
+    - name: License Compliance Check
+      id: license-check
+      run: |
+        npx license-checker --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC' --summary || true
+
+    - name: Secrets Detection
+      id: secrets-check
+      run: |
+        # Install and run TruffleHog
+        curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+        trufflehog git file://. --json --no-update > secrets-scan.json || true
+        SECRETS=$(cat secrets-scan.json | jq '. | length')
+
+        echo "secrets=$SECRETS" >> $GITHUB_OUTPUT
+
+        if [ "$SECRETS" -gt 0 ]; then
+          echo "❌ Secrets detected in repository"
+          cat secrets-scan.json | jq '.[] | {detector: .DetectorName, file: .SourceMetadata.Data.Git.file, line: .SourceMetadata.Data.Git.line}'
+          exit 1
+        fi
+
+    - name: Docker Security Scan
+      id: docker-scan
+      if: github.event_name != 'pull_request'
+      run: |
+        # Build test image
+        docker build -t security-test:latest -f docker/Dockerfile.security .
+
+        # Scan with Trivy
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+          -v ${{ github.workspace }}:/workspace \
+          aquasec/trivy image --format json --output /workspace/trivy-results.json security-test:latest || true
+
+        CRITICAL=$(cat trivy-results.json | jq '.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL") | length' | wc -l)
+        HIGH=$(cat trivy-results.json | jq '.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH") | length' | wc -l)
+
+        echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+        echo "high=$HIGH" >> $GITHUB_OUTPUT
+
+        if [ "$CRITICAL" -gt 0 ]; then
+          echo "❌ Critical vulnerabilities found in Docker image"
+          exit 1
+        fi
+
+    - name: Security Framework Tests
+      id: security-check
+      run: |
+        npm run test:security
+
+        # Extract security score from test results
+        SCORE=$(cat test-results/security-report.json | jq '.overallScore')
+        echo "score=$SCORE" >> $GITHUB_OUTPUT
+
+        if [ "$(echo "$SCORE < 80" | bc)" -eq 1 ]; then
+          echo "❌ Security score below threshold: $SCORE"
+          exit 1
+        fi
+
+    - name: Compliance Validation
+      id: compliance-check
+      run: |
+        npm run test:compliance
+
+        STATUS=$(cat test-results/compliance-report.json | jq -r '.overallStatus')
+        echo "status=$STATUS" >> $GITHUB_OUTPUT
+
+        if [ "$STATUS" != "COMPLIANT" ]; then
+          echo "❌ Compliance validation failed: $STATUS"
+          exit 1
+        fi
+
+    - name: Vulnerability Assessment
+      id: vulnerability-scan
+      run: |
+        npm run test:vulnerabilities
+
+        COUNT=$(cat test-results/vulnerability-report.json | jq '.totalVulnerabilities')
+        echo "count=$COUNT" >> $GITHUB_OUTPUT
+
+    - name: Upload Security Reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-reports-${{ github.run_number }}
+        path: |
+          test-results/
+          security-audit.json
+          semgrep-results.json
+          secrets-scan.json
+          trivy-results.json
+        retention-days: 30
+
+  penetration-testing:
+    name: Penetration Testing
+    runs-on: ubuntu-latest
+    needs: security-gates
+    if: github.event_name == 'schedule' || github.event.inputs.security_level == 'full'
+    timeout-minutes: 60
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        npm ci
+        npm run build:packages
+
+    - name: Start Test Environment
+      run: |
+        docker-compose -f docker-compose-test.yml up -d
+        sleep 30
+
+    - name: Run Penetration Tests
+      run: |
+        npm run test:penetration
+
+        # Check results
+        CRITICAL_FINDINGS=$(cat test-results/penetration-report.json | jq '.findings[] | select(.severity == "CRITICAL") | length' | wc -l)
+
+        if [ "$CRITICAL_FINDINGS" -gt 0 ]; then
+          echo "❌ Critical security vulnerabilities found during penetration testing"
+          exit 1
+        fi
+
+    - name: Cleanup Test Environment
+      if: always()
+      run: |
+        docker-compose -f docker-compose-test.yml down -v
+
+  threat-detection-validation:
+    name: Threat Detection Validation
+    runs-on: ubuntu-latest
+    needs: security-gates
+    if: github.event.inputs.security_level == 'comprehensive' || github.event.inputs.security_level == 'full'
+    timeout-minutes: 45
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        npm ci
+        npm run build:packages
+
+    - name: Run Threat Detection Tests
+      run: |
+        npm run test:threat-detection
+
+        # Validate detection accuracy
+        ACCURACY=$(cat test-results/threat-detection-report.json | jq '.accuracyMetrics.overallAccuracy')
+
+        if [ "$(echo "$ACCURACY < 0.95" | bc)" -eq 1 ]; then
+          echo "❌ Threat detection accuracy below threshold: $ACCURACY"
+          exit 1
+        fi
+
+  security-notification:
+    name: Security Notification
+    runs-on: ubuntu-latest
+    needs: [security-gates, penetration-testing, threat-detection-validation]
+    if: always()
+
+    steps:
+    - name: Notify Security Team
+      if: needs.security-gates.result == 'failure' || needs.penetration-testing.result == 'failure' || needs.threat-detection-validation.result == 'failure'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          const runId = context.runId;
+
+          await github.rest.issues.create({
+            owner,
+            repo,
+            title: `🚨 Security Pipeline Failure - Run #${runId}`,
+            body: `
+            ## Security Pipeline Failure Alert
+
+            **Run ID:** ${runId}
+            **Triggered by:** ${context.eventName}
+            **Branch:** ${context.ref}
+            **Commit:** ${context.sha}
+
+            ### Results Summary:
+            - Security Gates: ${{ needs.security-gates.result }}
+            - Penetration Testing: ${{ needs.penetration-testing.result || 'skipped' }}
+            - Threat Detection: ${{ needs.threat-detection-validation.result || 'skipped' }}
+
+            ### Security Metrics:
+            - Security Score: ${{ needs.security-gates.outputs.security-score }}
+            - Compliance Status: ${{ needs.security-gates.outputs.compliance-status }}
+            - Vulnerabilities: ${{ needs.security-gates.outputs.vulnerability-count }}
+
+            **Action Required:** Security team needs to review and address the failures.
+
+            [View Pipeline Run](https://github.com/${owner}/${repo}/actions/runs/${runId})
+            `,
+            labels: ['security', 'urgent', 'ci-failure']
+          });
+
+    - name: Success Notification
+      if: needs.security-gates.result == 'success' && (needs.penetration-testing.result == 'success' || needs.penetration-testing.result == 'skipped') && (needs.threat-detection-validation.result == 'success' || needs.threat-detection-validation.result == 'skipped')
+      run: |
+        echo "✅ All security tests passed successfully"
+        echo "Security Score: ${{ needs.security-gates.outputs.security-score }}"
+        echo "Compliance Status: ${{ needs.security-gates.outputs.compliance-status }}"

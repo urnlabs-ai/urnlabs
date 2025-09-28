@@ -27,6 +27,10 @@ async function main() {
     await prisma.metric.deleteMany();
     await prisma.alert.deleteMany();
     await prisma.document.deleteMany();
+    await prisma.performanceMetric.deleteMany();
+    await prisma.securityEvent.deleteMany();
+    await prisma.complianceRule.deleteMany();
+    await prisma.policy.deleteMany();
   }
 
   // Create organizations
@@ -287,7 +291,7 @@ async function main() {
     },
   });
 
-  const bugFixWorkflow = await prisma.workflow.create({
+  const _bugFixWorkflow = await prisma.workflow.create({
     data: {
       name: 'Bug Investigation and Resolution',
       type: 'bug-fix',
@@ -301,7 +305,7 @@ async function main() {
     },
   });
 
-  const securityAuditWorkflow = await prisma.workflow.create({
+  const _securityAuditWorkflow = await prisma.workflow.create({
     data: {
       name: 'Security Review and Hardening',
       type: 'security-audit',
@@ -487,15 +491,310 @@ async function main() {
     },
   });
 
+  // Create governance policies
+  console.log('🛡️ Creating governance policies...');
+
+  const dataRetentionPolicy = await prisma.policy.create({
+    data: {
+      name: 'Data Retention Policy',
+      description: 'Automated data retention and cleanup policies for compliance',
+      type: 'data_retention',
+      category: 'privacy',
+      priority: 'high',
+      organizationId: urnlabsOrg.id,
+      rules: {
+        auditLogs: { retentionDays: 2555 }, // 7 years
+        metrics: { retentionDays: 365 },
+        workflowRuns: { retentionDays: 90 },
+        notifications: { retentionDays: 30 },
+        securityEvents: { retentionDays: 2555 },
+      },
+      conditions: {
+        triggers: ['data_age', 'storage_threshold'],
+        thresholds: { storageGB: 80 },
+      },
+      actions: {
+        archive: { enabled: true, location: 's3://urnlabs-archives' },
+        delete: { enabled: true, confirmationRequired: true },
+        notify: { enabled: true, recipients: ['admin@urnlabs.ai'] },
+      },
+      isEnforced: true,
+      enforcementMode: 'strict',
+    },
+  });
+
+  const accessControlPolicy = await prisma.policy.create({
+    data: {
+      name: 'Role-Based Access Control',
+      description: 'Comprehensive access control policies for all platform resources',
+      type: 'access_control',
+      category: 'security',
+      priority: 'critical',
+      organizationId: urnlabsOrg.id,
+      rules: {
+        adminAccess: {
+          roles: ['SUPER_ADMIN', 'ADMIN'],
+          resources: ['*'],
+          actions: ['*'],
+        },
+        userAccess: {
+          roles: ['USER'],
+          resources: ['workflows:read', 'agents:read', 'notifications:read'],
+          actions: ['read', 'execute'],
+        },
+        apiAccess: {
+          requiresApiKey: true,
+          rateLimits: { requestsPerMinute: 100 },
+        },
+      },
+      conditions: {
+        ipWhitelist: ['10.0.0.0/8', '172.16.0.0/12'],
+        timeRestrictions: { allowedHours: '06:00-22:00' },
+      },
+      isEnforced: true,
+      enforcementMode: 'strict',
+    },
+  });
+
+  const securityMonitoringPolicy = await prisma.policy.create({
+    data: {
+      name: 'Security Monitoring & Incident Response',
+      description: 'Automated security monitoring with immediate threat response',
+      type: 'security',
+      category: 'security',
+      priority: 'critical',
+      organizationId: urnlabsOrg.id,
+      rules: {
+        failedLoginThreshold: 5,
+        suspiciousActivityPatterns: [
+          'multiple_failed_logins',
+          'unusual_api_usage',
+          'privilege_escalation_attempt',
+        ],
+        blockedCountries: ['CN', 'RU', 'KP'],
+        requireMFAForRoles: ['SUPER_ADMIN', 'ADMIN'],
+      },
+      actions: {
+        autoBlock: { enabled: true, duration: 3600 },
+        alertAdmins: { enabled: true, channels: ['email', 'slack'] },
+        logToSIEM: { enabled: true },
+      },
+      isEnforced: true,
+      enforcementMode: 'strict',
+    },
+  });
+
+  // Create compliance rules
+  console.log('📋 Creating compliance rules...');
+
+  await prisma.complianceRule.create({
+    data: {
+      name: 'GDPR Data Processing Compliance',
+      description: 'Ensure all personal data processing complies with GDPR requirements',
+      framework: 'GDPR',
+      requirement: 'Article 6 - Lawfulness of processing',
+      severity: 'critical',
+      organizationId: urnlabsOrg.id,
+      policyId: dataRetentionPolicy.id,
+      specification: 'All personal data must have a legal basis for processing and be processed transparently',
+      controls: {
+        consentManagement: { required: true, documented: true },
+        dataMinimization: { required: true },
+        purposeLimitation: { required: true },
+        retentionLimits: { required: true, maxDays: 2555 },
+      },
+      evidence: {
+        documents: ['privacy_policy', 'consent_records', 'data_inventory'],
+        procedures: ['data_subject_requests', 'breach_notification'],
+      },
+      testProcedure: 'Quarterly audit of data processing activities and consent records',
+      complianceStatus: 'compliant',
+      lastAuditDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+      nextAuditDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days from now
+    },
+  });
+
+  await prisma.complianceRule.create({
+    data: {
+      name: 'SOC 2 Type II Security Controls',
+      description: 'Maintain SOC 2 Type II compliance for security controls',
+      framework: 'SOC2',
+      requirement: 'CC6.1 - Logical and Physical Access Controls',
+      severity: 'high',
+      organizationId: urnlabsOrg.id,
+      policyId: accessControlPolicy.id,
+      specification: 'Implement and maintain logical and physical access controls',
+      controls: {
+        accessManagement: { required: true, reviewFrequency: 'quarterly' },
+        privilegedAccess: { required: true, monitoring: true },
+        physicalSecurity: { required: true, documented: true },
+      },
+      evidence: {
+        documents: ['access_control_policy', 'user_access_reviews'],
+        procedures: ['access_provisioning', 'access_termination'],
+      },
+      testProcedure: 'Annual SOC 2 audit with quarterly internal reviews',
+      complianceStatus: 'compliant',
+      lastAuditDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days ago
+      nextAuditDate: new Date(Date.now() + 270 * 24 * 60 * 60 * 1000), // 270 days from now
+    },
+  });
+
+  // Create sample security events
+  console.log('🚨 Creating sample security events...');
+
+  await prisma.securityEvent.create({
+    data: {
+      type: 'policy_violation',
+      severity: 'medium',
+      status: 'resolved',
+      title: 'Unusual API Access Pattern Detected',
+      description: 'API access from unusual geographic location during off-hours',
+      source: 'automated',
+      category: 'authentication',
+      organizationId: urnlabsOrg.id,
+      policyId: securityMonitoringPolicy.id,
+      sourceIp: '203.0.113.42',
+      userAgent: 'PostmanRuntime/7.29.0',
+      endpoint: '/api/v1/workflows',
+      method: 'GET',
+      payload: { query: { limit: 100 } },
+      metadata: {
+        geolocation: { country: 'Unknown', city: 'Unknown' },
+        detectionRule: 'unusual_location_access',
+      },
+      riskScore: 6.5,
+      impact: 'medium',
+      likelihood: 'medium',
+      responseActions: {
+        actionsToken: ['ip_monitoring_enabled', 'user_notification_sent'],
+        timestamp: new Date(),
+      },
+      resolution: 'Confirmed legitimate access from employee traveling abroad',
+      detectedAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+      acknowledgedAt: new Date(Date.now() - 23 * 60 * 60 * 1000), // 23 hours ago
+      resolvedAt: new Date(Date.now() - 22 * 60 * 60 * 1000), // 22 hours ago
+    },
+  });
+
+  await prisma.securityEvent.create({
+    data: {
+      type: 'suspicious_activity',
+      severity: 'low',
+      status: 'investigating',
+      title: 'Multiple Failed Login Attempts',
+      description: 'User account experiencing repeated failed login attempts',
+      source: 'automated',
+      category: 'authentication',
+      organizationId: urnlabsOrg.id,
+      userId: demoUser.id,
+      policyId: securityMonitoringPolicy.id,
+      sourceIp: '192.0.2.100',
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      endpoint: '/api/auth/login',
+      method: 'POST',
+      metadata: {
+        failedAttempts: 3,
+        timePeriod: '15 minutes',
+        detectionRule: 'failed_login_threshold',
+      },
+      riskScore: 4.2,
+      impact: 'low',
+      likelihood: 'medium',
+      detectedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+      acknowledgedAt: new Date(Date.now() - 90 * 60 * 1000), // 90 minutes ago
+    },
+  });
+
+  // Create performance metrics
+  console.log('📈 Creating performance metrics...');
+
+  const performanceMetrics = [
+    {
+      name: 'API Response Time',
+      category: 'api_response',
+      metric: 'response_time',
+      value: 142.5,
+      unit: 'ms',
+      agentId: null,
+      workflowId: null,
+      endpoint: '/api/v1/workflows',
+      environment: 'production',
+      threshold: 200,
+      isAlert: false,
+    },
+    {
+      name: 'Database Query Performance',
+      category: 'database_query',
+      metric: 'query_time',
+      value: 23.8,
+      unit: 'ms',
+      environment: 'production',
+      threshold: 100,
+      isAlert: false,
+    },
+    {
+      name: 'Agent Execution Time',
+      category: 'agent_execution',
+      metric: 'execution_time',
+      value: 8542,
+      unit: 'ms',
+      agentId: codeReviewerAgent.id,
+      environment: 'production',
+      threshold: 30000,
+      isAlert: false,
+    },
+    {
+      name: 'Workflow Completion Rate',
+      category: 'workflow_completion',
+      metric: 'success_rate',
+      value: 96.7,
+      unit: 'percent',
+      workflowId: featureDevWorkflow.id,
+      environment: 'production',
+      threshold: 95,
+      isAlert: false,
+    },
+    {
+      name: 'CPU Usage Alert',
+      category: 'api_response',
+      metric: 'cpu_usage',
+      value: 85.2,
+      unit: 'percent',
+      environment: 'production',
+      threshold: 80,
+      isAlert: true,
+      alertLevel: 'warning',
+    },
+  ];
+
+  for (const metric of performanceMetrics) {
+    await prisma.performanceMetric.create({
+      data: {
+        ...metric,
+        organizationId: urnlabsOrg.id,
+        tags: {
+          service: 'api',
+          instance: 'web-01',
+          version: '1.0.0',
+        },
+      },
+    });
+  }
+
   console.log('✅ Database seed completed successfully!');
   console.log(`
 📊 Seeded data summary:
 • Organizations: 2 (Urnlabs, Demo Org)
-• Users: 3 (admin@urnlabs.ai, developer@urnlabs.ai, demo@example.com)  
+• Users: 3 (admin@urnlabs.ai, developer@urnlabs.ai, demo@example.com)
 • Agents: 4 (Code Reviewer, Architect, Deployment, Testing)
 • Workflows: 3 (Feature Dev, Bug Fix, Security Audit)
 • Integrations: 2 (GitHub, Slack)
-• Metrics: 8 sample metrics
+• Policies: 3 (Data Retention, Access Control, Security Monitoring)
+• Compliance Rules: 2 (GDPR, SOC 2 Type II)
+• Security Events: 2 (API Access Pattern, Failed Logins)
+• Performance Metrics: 5 (API, Database, Agent, Workflow, CPU)
+• Legacy Metrics: 8 sample metrics
 • Notifications: 2 welcome messages
 
 🔑 Login credentials (all users):

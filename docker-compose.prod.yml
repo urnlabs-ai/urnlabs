@@ -1,0 +1,137 @@
+version: '3.8'
+
+# Production Docker Compose for UrnLabs AI Platform
+# Optimized for urnlabs.ai and usmanramzan.ai deployment
+
+services:
+  # UrnLabs.ai - Main AI Platform Website
+  urnlabs-prod:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.astro
+      target: production
+      args:
+        SITE_NAME: urnlabs
+    container_name: urnlabs-production
+    restart: unless-stopped
+    ports:
+      - "8001:80"  # Nginx serving static files
+    environment:
+      - NODE_ENV=production
+      - SITE_NAME=urnlabs
+    volumes:
+      - ./dist/urnlabs:/usr/share/nginx/html:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - production-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.urnlabs.rule=Host(`urnlabs.ai`)"
+      - "traefik.http.routers.urnlabs.tls=true"
+      - "traefik.http.routers.urnlabs.tls.certresolver=letsencrypt"
+
+  # UsmanRamzan.ai - Personal AI Portfolio Website
+  usmanramzan-prod:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.astro
+      target: production
+      args:
+        SITE_NAME: usmanramzan-ai
+    container_name: usmanramzan-production
+    restart: unless-stopped
+    ports:
+      - "8002:80"  # Nginx serving static files
+    environment:
+      - NODE_ENV=production
+      - SITE_NAME=usmanramzan-ai
+    volumes:
+      - ./dist/usmanramzan-ai:/usr/share/nginx/html:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - production-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.usmanramzan.rule=Host(`usmanramzan.ai`)"
+      - "traefik.http.routers.usmanramzan.tls=true"
+      - "traefik.http.routers.usmanramzan.tls.certresolver=letsencrypt"
+
+  # Traefik Reverse Proxy with SSL
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik-production
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=muhammad@urnlabs.ai"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--global.sendanonymoususage=false"
+      - "--log.level=INFO"
+      - "--accesslog=true"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+    networks:
+      - production-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.urnlabs.ai`)"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$2y$$10$$K3J5L7cjG8KZfZv6rLmE4OyNJLhZ3QyXcQ2Kz1RrKqGpL8YkZmKpS"
+
+  # Monitoring with Prometheus (Optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus-production
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - production-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`metrics.urnlabs.ai`)"
+      - "traefik.http.routers.prometheus.tls=true"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+
+volumes:
+  traefik_letsencrypt:
+    driver: local
+  prometheus_data:
+    driver: local
+
+networks:
+  production-network:
+    driver: bridge
+    name: urnlabs-production

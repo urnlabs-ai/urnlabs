@@ -1,0 +1,160 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: urnlabs-platform
+  labels:
+    app.kubernetes.io/name: gateway
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/version: latest
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway
+      app.kubernetes.io/component: gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gateway
+        app.kubernetes.io/component: gateway
+        app.kubernetes.io/version: latest
+    spec:
+      imagePullSecrets:
+      - name: registry-credentials
+      containers:
+      - name: gateway
+        image: ghcr.io/urnlabs/urnlabs-gateway:latest
+        ports:
+        - containerPort: 7000
+          name: http
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: urnlabs-platform-config
+              key: NODE_ENV
+        - name: GATEWAY_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: urnlabs-platform-config
+              key: GATEWAY_PORT
+        - name: GATEWAY_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: urnlabs-platform-config
+              key: GATEWAY_HOST
+        - name: UPSTREAM_API_URL
+          value: "http://api-service:7001"
+        - name: UPSTREAM_AGENTS_URL
+          value: "http://agents-service:7002"
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: urnlabs-platform-secrets
+              key: REDIS_URL
+        - name: RATE_LIMIT_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: urnlabs-platform-config
+              key: RATE_LIMIT_ENABLED
+        - name: RATE_LIMIT_MAX
+          valueFrom:
+            configMapKeyRef:
+              name: urnlabs-platform-config
+              key: RATE_LIMIT_MAX
+        - name: CORS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: urnlabs-platform-config
+              key: CORS_ENABLED
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 7000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 7000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 1
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+  namespace: urnlabs-platform
+  labels:
+    app.kubernetes.io/name: gateway
+    app.kubernetes.io/component: gateway
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 7000
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 7000
+    protocol: TCP
+    name: https
+  selector:
+    app.kubernetes.io/name: gateway
+    app.kubernetes.io/component: gateway
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gateway-hpa
+  namespace: urnlabs-platform
+  labels:
+    app.kubernetes.io/name: gateway
+    app.kubernetes.io/component: autoscaler
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: gateway
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

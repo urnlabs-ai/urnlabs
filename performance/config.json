@@ -1,0 +1,172 @@
+{
+  "environments": {
+    "development": {
+      "baseUrl": "http://localhost:7001",
+      "thresholds": {
+        "p95_regression": 0.3,
+        "p99_regression": 0.4,
+        "error_rate_regression": 0.2,
+        "throughput_regression": 0.25
+      },
+      "scenarios": {
+        "smoke_test": {
+          "vus": 1,
+          "duration": "30s"
+        },
+        "load_test": {
+          "stages": [
+            { "duration": "1m", "target": 5 },
+            { "duration": "2m", "target": 5 },
+            { "duration": "1m", "target": 0 }
+          ]
+        },
+        "stress_test": {
+          "stages": [
+            { "duration": "1m", "target": 15 },
+            { "duration": "2m", "target": 15 },
+            { "duration": "1m", "target": 0 }
+          ]
+        }
+      },
+      "alerting": {
+        "enabled": false,
+        "block_on_regression": false
+      }
+    },
+    "staging": {
+      "baseUrl": "https://staging-api.urnlabs.com",
+      "thresholds": {
+        "p95_regression": 0.2,
+        "p99_regression": 0.25,
+        "error_rate_regression": 0.1,
+        "throughput_regression": 0.15
+      },
+      "scenarios": {
+        "smoke_test": {
+          "vus": 1,
+          "duration": "30s"
+        },
+        "load_test": {
+          "stages": [
+            { "duration": "1m", "target": 10 },
+            { "duration": "3m", "target": 10 },
+            { "duration": "1m", "target": 20 },
+            { "duration": "3m", "target": 20 },
+            { "duration": "1m", "target": 0 }
+          ]
+        },
+        "stress_test": {
+          "stages": [
+            { "duration": "1m", "target": 30 },
+            { "duration": "3m", "target": 30 },
+            { "duration": "1m", "target": 50 },
+            { "duration": "3m", "target": 50 },
+            { "duration": "2m", "target": 0 }
+          ]
+        }
+      },
+      "alerting": {
+        "enabled": true,
+        "block_on_regression": true,
+        "channels": ["slack", "webhook"]
+      }
+    },
+    "production": {
+      "baseUrl": "https://api.urnlabs.com",
+      "thresholds": {
+        "p95_regression": 0.15,
+        "p99_regression": 0.2,
+        "error_rate_regression": 0.05,
+        "throughput_regression": 0.1
+      },
+      "scenarios": {
+        "smoke_test": {
+          "vus": 2,
+          "duration": "30s"
+        },
+        "load_test": {
+          "stages": [
+            { "duration": "2m", "target": 20 },
+            { "duration": "10m", "target": 20 },
+            { "duration": "2m", "target": 40 },
+            { "duration": "10m", "target": 40 },
+            { "duration": "2m", "target": 0 }
+          ]
+        },
+        "stress_test": {
+          "stages": [
+            { "duration": "2m", "target": 50 },
+            { "duration": "5m", "target": 50 },
+            { "duration": "2m", "target": 100 },
+            { "duration": "5m", "target": 100 },
+            { "duration": "3m", "target": 0 }
+          ]
+        }
+      },
+      "alerting": {
+        "enabled": true,
+        "block_on_regression": true,
+        "channels": ["slack", "webhook", "email"],
+        "escalation": {
+          "critical_timeout": "5m",
+          "pagerduty_integration": true
+        }
+      }
+    }
+  },
+  "global": {
+    "baseline_retention_days": 90,
+    "reports_retention_days": 30,
+    "trend_analysis_window_days": 7,
+    "alert_cooldown_minutes": 15,
+    "dashboard_refresh_interval": "5m"
+  },
+  "k6": {
+    "default_options": {
+      "discardResponseBodies": true,
+      "scenarios": {
+        "default": {
+          "executor": "ramping-vus",
+          "gracefulRampDown": "30s"
+        }
+      },
+      "thresholds": {
+        "http_req_duration": ["p(99)<200"],
+        "http_req_failed": ["rate<0.01"],
+        "checks": ["rate>0.95"]
+      }
+    },
+    "tags": {
+      "project": "urnlabs-ai-platform",
+      "team": "platform",
+      "service": "api"
+    }
+  },
+  "monitoring": {
+    "metrics_collection": {
+      "enabled": true,
+      "interval": "10s",
+      "retention": "7d"
+    },
+    "dashboard": {
+      "enabled": true,
+      "auto_refresh": true,
+      "charts": [
+        "latency_trends",
+        "error_rates",
+        "throughput",
+        "alerts_summary"
+      ]
+    },
+    "exports": {
+      "prometheus": {
+        "enabled": true,
+        "endpoint": "/metrics"
+      },
+      "json": {
+        "enabled": true,
+        "directory": "./reports"
+      }
+    }
+  }
+}

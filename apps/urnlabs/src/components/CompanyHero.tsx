@@ -1,6 +1,5 @@
 import React from 'react';
-import { Button } from './ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Badge } from '@urnlabs/ui';
 import { ArrowRight, CheckCircle, Shield, BarChart3, Users, Star, TrendingUp, Zap } from 'lucide-react';
 
 const CompanyHero: React.FC = () => {
@@ -19,10 +18,10 @@ const CompanyHero: React.FC = () => {
           {/* Left Column - Main Content */}
           <div className="text-center lg:text-left">
             {/* Badge */}
-            <div className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-blue-500/10 text-blue-400 ring-1 ring-inset ring-blue-500/20 mb-8">
-              <Zap className="w-4 h-4 mr-2" />
+            <Badge variant="secondary" className="inline-flex items-center gap-2 mb-8 bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20 transition-colors">
+              <Zap className="w-4 h-4" />
               Production-Ready AI Platform
-            </div>
+            </Badge>
             
             {/* Main Headline */}
             <h1 className="text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl mb-8">

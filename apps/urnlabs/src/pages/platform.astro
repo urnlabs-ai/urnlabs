@@ -1,0 +1,237 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import Features from '~/components/Features';
+---
+
+<BaseLayout
+  title="Platform - AI Agent Workflow Builder | Urnlabs"
+  description="Explore our comprehensive AI agent platform. Visual workflow builder, enterprise governance, multi-agent coordination, and real-time analytics."
+>
+  <main>
+    <!-- Platform Hero -->
+    <section class="relative overflow-hidden bg-slate-900 py-24 sm:py-32">
+      <div class="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+
+      <div class="relative mx-auto max-w-7xl px-6 lg:px-8">
+        <div class="mx-auto max-w-2xl text-center">
+          <div class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-blue-500/10 text-blue-400 ring-1 ring-inset ring-blue-500/20 mb-8">
+            <span class="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+            Production-Ready Platform
+          </div>
+
+          <h1 class="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+            Build AI workflows that
+            <span class="bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent block mt-2">
+              actually work
+            </span>
+          </h1>
+
+          <p class="mt-6 text-lg leading-8 text-slate-300 max-w-3xl mx-auto">
+            Our platform combines enterprise-grade security with developer-friendly tools to deliver
+            AI automation that scales from prototype to production in days, not months.
+          </p>
+
+          <div class="mt-10 flex items-center justify-center gap-x-6">
+            <a
+              href="/contact"
+              class="rounded-md bg-blue-500 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-600 transition-colors"
+            >
+              Start Free Trial
+            </a>
+            <a
+              href="/demo"
+              class="text-sm font-semibold leading-6 text-slate-300 hover:text-white transition-colors"
+            >
+              Watch Demo <span aria-hidden="true">→</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Core Platform Features -->
+    <Features client:load />
+
+    <!-- Technical Specifications -->
+    <section class="py-24 bg-slate-950">
+      <div class="container mx-auto px-6 lg:px-8">
+        <div class="text-center mb-16">
+          <h2 class="text-3xl font-bold text-white mb-6">
+            Technical Specifications
+          </h2>
+          <p class="text-xl text-slate-300 max-w-3xl mx-auto">
+            Enterprise-grade infrastructure designed for scale, security, and reliability.
+          </p>
+        </div>
+
+        <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <!-- Performance -->
+          <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-6">
+            <h3 class="text-white font-semibold text-lg mb-4">Performance</h3>
+            <ul class="space-y-2 text-slate-300">
+              <li>• Sub-200ms API response times</li>
+              <li>• 99.9% uptime SLA with automated failover</li>
+              <li>• Auto-scaling to handle traffic spikes</li>
+              <li>• Global CDN for low-latency access</li>
+              <li>• Real-time monitoring and alerting</li>
+            </ul>
+          </div>
+
+          <!-- Security -->
+          <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-6">
+            <h3 class="text-white font-semibold text-lg mb-4">Security</h3>
+            <ul class="space-y-2 text-slate-300">
+              <li>• SOC 2 Type II certified</li>
+              <li>• End-to-end encryption (AES-256)</li>
+              <li>• Role-based access control (RBAC)</li>
+              <li>• GDPR, HIPAA, and SOX compliance</li>
+              <li>• Complete audit trails</li>
+            </ul>
+          </div>
+
+          <!-- Integrations -->
+          <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-6">
+            <h3 class="text-white font-semibold text-lg mb-4">Integrations</h3>
+            <ul class="space-y-2 text-slate-300">
+              <li>• 200+ pre-built connectors</li>
+              <li>• RESTful APIs with OpenAPI specs</li>
+              <li>• Webhook support for real-time events</li>
+              <li>• Custom connector development</li>
+              <li>• GraphQL queries for complex data</li>
+            </ul>
+          </div>
+
+          <!-- Deployment -->
+          <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-6">
+            <h3 class="text-white font-semibold text-lg mb-4">Deployment</h3>
+            <ul class="space-y-2 text-slate-300">
+              <li>• Cloud, on-premise, or hybrid</li>
+              <li>• Docker containers and Kubernetes</li>
+              <li>• CI/CD pipeline integration</li>
+              <li>• Blue-green deployments</li>
+              <li>• Infrastructure as Code (IaC)</li>
+            </ul>
+          </div>
+
+          <!-- Monitoring -->
+          <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-6">
+            <h3 class="text-white font-semibold text-lg mb-4">Monitoring</h3>
+            <ul class="space-y-2 text-slate-300">
+              <li>• Real-time performance dashboards</li>
+              <li>• Custom metrics and KPIs</li>
+              <li>• Alerting and notification system</li>
+              <li>• Log aggregation and analysis</li>
+              <li>• Business impact tracking</li>
+            </ul>
+          </div>
+
+          <!-- Support -->
+          <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-6">
+            <h3 class="text-white font-semibold text-lg mb-4">Support</h3>
+            <ul class="space-y-2 text-slate-300">
+              <li>• 24/7 technical support</li>
+              <li>• Dedicated success manager</li>
+              <li>• Comprehensive documentation</li>
+              <li>• Video tutorials and training</li>
+              <li>• Developer community access</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture Overview -->
+    <section class="py-24 bg-slate-900">
+      <div class="container mx-auto px-6 lg:px-8">
+        <div class="text-center mb-16">
+          <h2 class="text-3xl font-bold text-white mb-6">
+            Platform Architecture
+          </h2>
+          <p class="text-xl text-slate-300 max-w-3xl mx-auto">
+            Built on modern cloud-native architecture for maximum scalability and reliability.
+          </p>
+        </div>
+
+        <div class="bg-slate-800/30 rounded-2xl p-8 border border-slate-700/50">
+          <div class="grid gap-8 md:grid-cols-3">
+            <!-- Frontend Layer -->
+            <div class="text-center">
+              <div class="w-16 h-16 bg-blue-500/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 class="text-white font-semibold text-lg mb-2">Frontend Layer</h3>
+              <ul class="text-sm text-slate-300 space-y-1">
+                <li>React/TypeScript UI</li>
+                <li>Real-time dashboards</li>
+                <li>Visual workflow builder</li>
+                <li>Mobile responsive</li>
+              </ul>
+            </div>
+
+            <!-- API Gateway -->
+            <div class="text-center">
+              <div class="w-16 h-16 bg-green-500/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
+                </svg>
+              </div>
+              <h3 class="text-white font-semibold text-lg mb-2">API Gateway</h3>
+              <ul class="text-sm text-slate-300 space-y-1">
+                <li>Rate limiting & auth</li>
+                <li>Request routing</li>
+                <li>Load balancing</li>
+                <li>API versioning</li>
+              </ul>
+            </div>
+
+            <!-- Backend Services -->
+            <div class="text-center">
+              <div class="w-16 h-16 bg-purple-500/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <h3 class="text-white font-semibold text-lg mb-2">Backend Services</h3>
+              <ul class="text-sm text-slate-300 space-y-1">
+                <li>Microservices architecture</li>
+                <li>Event-driven processing</li>
+                <li>Auto-scaling containers</li>
+                <li>Database clustering</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom CTA -->
+    <section class="py-24 bg-slate-950">
+      <div class="container mx-auto px-6 lg:px-8">
+        <div class="bg-gradient-to-r from-blue-500/10 to-green-500/10 rounded-2xl p-12 border border-blue-500/20 text-center">
+          <h2 class="text-3xl font-bold text-white mb-6">
+            Ready to see it in action?
+          </h2>
+          <p class="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
+            Schedule a personalized demo to see how our platform can transform your operations.
+          </p>
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a
+              href="/contact"
+              class="inline-flex items-center justify-center rounded-md bg-blue-500 px-8 py-3 text-sm font-medium text-white hover:bg-blue-600 transition-colors"
+            >
+              Schedule Demo
+            </a>
+            <a
+              href="/pricing"
+              class="inline-flex items-center text-blue-400 hover:text-blue-300 font-medium transition-colors"
+            >
+              View Pricing →
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

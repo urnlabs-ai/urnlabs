@@ -3,7 +3,6 @@ import { logConfig } from '@/lib/config.js';
 
 export const logger = pino({
   level: logConfig.level,
-  transport: logConfig.transport,
   formatters: {
     level(label) {
       return { level: label };

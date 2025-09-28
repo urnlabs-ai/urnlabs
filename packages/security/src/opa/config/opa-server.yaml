@@ -1,0 +1,115 @@
+# OPA Server Configuration
+# For standalone OPA server deployment
+
+server:
+  addr: 0.0.0.0:8181
+  authentication: token
+  authorization: basic
+  tls:
+    enabled: false
+    cert_file: ""
+    private_key_file: ""
+
+decision_logs:
+  console: true
+  service: decision_logger
+  reporting:
+    min_delay_seconds: 10
+    max_delay_seconds: 600
+    upload_size_limit_bytes: 32768
+
+status:
+  console: true
+  service: status_logger
+
+services:
+  authz:
+    url: http://localhost:8181
+
+  decision_logger:
+    url: http://localhost:8080/decisions
+    headers:
+      Authorization: "Bearer ${DECISION_LOGGER_TOKEN}"
+      Content-Type: "application/json"
+
+  status_logger:
+    url: http://localhost:8080/status
+    headers:
+      Authorization: "Bearer ${STATUS_LOGGER_TOKEN}"
+      Content-Type: "application/json"
+
+bundles:
+  authz:
+    resource: "bundle.tar.gz"
+    service: authz
+    polling:
+      min_delay_seconds: 10
+      max_delay_seconds: 300
+    persist: true
+    signing:
+      keyid: "global_key"
+      scope: "write"
+
+storage:
+  inmemory: {}
+
+plugins:
+  envoy_ext_authz_grpc:
+    addr: :9191
+    query: data.envoy.authz.allow
+    enable_reflection: true
+
+# Discovery configuration for dynamic bundle loading
+discovery:
+  resource: "/discovery"
+  service: authz
+  polling:
+    min_delay_seconds: 60
+    max_delay_seconds: 300
+
+# Performance and resource limits
+limits:
+  memory_limit_bytes: 1073741824  # 1GB
+  max_bundle_size_bytes: 134217728  # 128MB
+  max_policy_size_bytes: 10485760   # 10MB
+
+# Diagnostics and debugging
+diagnostic:
+  addr: :8282
+  enabled: true
+
+# Metrics collection
+metrics:
+  prometheus:
+    enabled: true
+    addr: :8282
+    path: /metrics
+
+# Profiling (disable in production)
+profiling:
+  enabled: false
+  addr: :6060
+
+# Security settings
+security:
+  enable_audit: true
+  audit_log_level: info
+  disable_local_auth: false
+  require_tls: false
+  allowed_hosts:
+    - localhost
+    - 127.0.0.1
+    - security-service
+    - api-gateway
+
+# Caching configuration
+caching:
+  inter_query_builtin_cache:
+    max_size_bytes: 104857600  # 100MB
+
+# Runtime configuration
+runtime:
+  max_errors: 100
+  builtin_errors:
+    raise_error: true
+  nd_builtin_cache: true

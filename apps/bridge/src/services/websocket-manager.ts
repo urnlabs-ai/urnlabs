@@ -139,7 +139,7 @@ export class WebSocketManager {
     if (handler) {
       try {
         await handler(client, message.data)
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Error handling message type ${message.type}:`, error)
         this.sendToClient(client, {
           type: 'error',

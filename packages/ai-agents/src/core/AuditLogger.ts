@@ -41,7 +41,7 @@ export interface AuditQuery {
 }
 
 export class AuditLogger {
-  private logger: winston.Logger;
+  private logger!: winston.Logger;
   private isInitialized = false;
   private buffer: AuditLogEntry[] = [];
   private bufferSize = 1000;
@@ -214,7 +214,7 @@ export class AuditLogger {
   /**
    * Query audit logs
    */
-  async query(query: AuditQuery): Promise<{
+  async query(_query: AuditQuery): Promise<{
     entries: AuditLogEntry[];
     total: number;
     hasMore: boolean;

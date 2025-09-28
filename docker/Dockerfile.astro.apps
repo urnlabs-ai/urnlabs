@@ -1,0 +1,39 @@
+# Improved Dockerfile for Astro applications in apps directory
+FROM node:18-alpine
+
+# Install system dependencies
+RUN apk add --no-cache libc6-compat curl
+
+# Set working directory
+WORKDIR /app
+
+# Install pnpm for better workspace support
+RUN npm install -g pnpm@8
+
+# Copy the specific app directory first
+ARG SITE_DIR=apps/urnlabs
+COPY ${SITE_DIR}/ ./current-site/
+
+# Change to the site directory
+WORKDIR /app/current-site
+
+# Install dependencies directly in the site directory
+# This ensures all local dependencies are properly installed
+RUN npm install --legacy-peer-deps || \
+    (echo "NPM install failed, trying with force" && \
+    npm install --force) || \
+    (echo "Installing individual dependencies" && \
+    npm install astro @astrojs/check @astrojs/react @astrojs/tailwind react react-dom typescript tailwindcss)
+
+# Verify Astro is available
+RUN npx astro --version || npm install -g astro@latest
+
+# Expose port
+EXPOSE 4321
+
+# Health check with longer timeout for startup
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:4321/ || exit 1
+
+# Start development server with npm instead of pnpm to avoid workspace issues
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "4321"]

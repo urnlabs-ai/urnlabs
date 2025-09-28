@@ -1,0 +1,53 @@
+name: urnlabs_mobile_sdk
+version: 1.0.0
+description: Urnlabs Mobile SDK for Flutter - AI Agent Platform Integration
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP and networking
+  dio: ^5.3.2
+  dio_certificate_pinning: ^4.0.1
+
+  # Local storage
+  sqflite: ^2.3.0
+  shared_preferences: ^2.2.2
+  path: ^1.8.3
+
+  # WebSocket
+  web_socket_channel: ^2.4.0
+
+  # State management
+  provider: ^6.1.0
+
+  # Connectivity
+  connectivity_plus: ^5.0.1
+
+  # JSON handling
+  json_annotation: ^4.8.1
+
+  # Utilities
+  crypto: ^3.0.3
+  uuid: ^4.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  build_runner: ^2.4.7
+  json_serializable: ^6.7.1
+  mockito: ^5.4.2
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.urnlabs.mobile_sdk
+        pluginClass: UrnlabsMobileSdkPlugin
+      ios:
+        pluginClass: UrnlabsMobileSdkPlugin

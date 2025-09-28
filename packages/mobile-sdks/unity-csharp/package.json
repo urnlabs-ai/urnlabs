@@ -1,0 +1,55 @@
+{
+  "name": "com.urnlabs.ai-agents-sdk",
+  "version": "1.0.0",
+  "displayName": "UrnLabs AI Agents SDK",
+  "description": "Unity SDK for UrnLabs AI Agent Platform. Execute workflows, manage agents, and integrate AI capabilities into your Unity games and applications.",
+  "unity": "2021.3",
+  "keywords": [
+    "ai",
+    "agents",
+    "workflow",
+    "automation",
+    "urnlabs",
+    "sdk",
+    "unity"
+  ],
+  "author": {
+    "name": "UrnLabs Team",
+    "email": "developers@urnlabs.ai",
+    "url": "https://urnlabs.ai"
+  },
+  "category": "AI & Machine Learning",
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  },
+  "samples": [
+    {
+      "displayName": "Basic Integration",
+      "description": "Basic SDK integration example showing initialization and workflow execution",
+      "path": "Samples~/BasicIntegration"
+    },
+    {
+      "displayName": "Agent Chat Example",
+      "description": "Example showing how to create and interact with AI agents",
+      "path": "Samples~/AgentChat"
+    },
+    {
+      "displayName": "Game Integration",
+      "description": "Complete game integration example with gameplay AI features",
+      "path": "Samples~/GameIntegration"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/urnlabs/ai-agents-sdk-unity.git"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://docs.urnlabs.ai/sdk/unity",
+  "bugs": {
+    "url": "https://github.com/urnlabs/ai-agents-sdk-unity/issues"
+  },
+  "unityRelease": "0f1",
+  "documentationUrl": "https://docs.urnlabs.ai/sdk/unity",
+  "changelogUrl": "https://github.com/urnlabs/ai-agents-sdk-unity/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/urnlabs/ai-agents-sdk-unity/blob/main/LICENSE"
+}

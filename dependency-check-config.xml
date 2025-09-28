@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>ai.urnlabs</groupId>
+    <artifactId>dependency-check-config</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+
+    <name>OWASP Dependency Check Configuration</name>
+    <description>Configuration for OWASP Dependency Check scanning</description>
+
+    <properties>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <dependency-check-maven.version>8.4.0</dependency-check-maven.version>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>${dependency-check-maven.version}</version>
+                <configuration>
+                    <!-- Fail build on CVSS score of 7 or higher -->
+                    <failBuildOnCVSS>7</failBuildOnCVSS>
+
+                    <!-- Output formats -->
+                    <formats>
+                        <format>HTML</format>
+                        <format>JSON</format>
+                        <format>XML</format>
+                        <format>SARIF</format>
+                    </formats>
+
+                    <!-- Scan configuration -->
+                    <scanSet>
+                        <fileSet>
+                            <directory>${basedir}</directory>
+                            <includes>
+                                <include>**/package.json</include>
+                                <include>**/package-lock.json</include>
+                                <include>**/yarn.lock</include>
+                                <include>**/pnpm-lock.yaml</include>
+                            </includes>
+                        </fileSet>
+                    </scanSet>
+
+                    <!-- Enable analyzers -->
+                    <archiveAnalyzerEnabled>true</archiveAnalyzerEnabled>
+                    <nodePackageAnalyzerEnabled>true</nodePackageAnalyzerEnabled>
+                    <nodeAuditAnalyzerEnabled>true</nodeAuditAnalyzerEnabled>
+                    <retireJsAnalyzerEnabled>true</retireJsAnalyzerEnabled>
+
+                    <!-- Database settings -->
+                    <dataDirectory>${project.build.directory}/dependency-check-data</dataDirectory>
+                    <databaseDriverName>org.h2.Driver</databaseDriverName>
+
+                    <!-- Suppression file for false positives -->
+                    <suppressionFiles>
+                        <suppressionFile>${basedir}/dependency-check-suppressions.xml</suppressionFile>
+                    </suppressionFiles>
+
+                    <!-- Output directory -->
+                    <outputDirectory>${project.build.directory}/dependency-check</outputDirectory>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

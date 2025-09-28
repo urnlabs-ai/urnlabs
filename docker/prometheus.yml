@@ -36,15 +36,26 @@ scrape_configs:
       - targets: ['dashboard:7004']
     metrics_path: '/metrics'
 
-  - job_name: 'urn-maestro'
-    static_configs:
-      - targets: ['urn-maestro:7005']
-    metrics_path: '/metrics'
+  # urn-maestro metrics (disabled)
+  # NOTE:
+  # - The urn-maestro service is not implemented in this repository.
+  # - When the service is available, re-enable the following job to scrape metrics:
+  # - job_name: 'urn-maestro'
+  #   static_configs:
+  #     - targets: ['urn-maestro:7005']
+  #   metrics_path: '/metrics'
 
   - job_name: 'monitoring'
     static_configs:
       - targets: ['monitoring:7006']
-    metrics_path: '/metrics'
+    metrics_path: '/metrics/prometheus'
+    scrape_interval: 15s
+
+  - job_name: 'monitoring-realtime'
+    static_configs:
+      - targets: ['monitoring:7006']
+    metrics_path: '/metrics/realtime'
+    scrape_interval: 30s
 
   - job_name: 'mcp-integration'
     static_configs:

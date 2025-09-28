@@ -9,7 +9,7 @@ export default defineConfig({
   integrations: [
     react(),
     tailwind({
-      configFile: './tailwind.config.mjs',
+      configFile: './tailwind.config.js',
     }),
     mdx(),
     sitemap(),

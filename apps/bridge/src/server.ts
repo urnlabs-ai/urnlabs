@@ -65,8 +65,8 @@ server.register(async function (fastify) {
       try {
         const data = JSON.parse(message.toString())
         await wsManager.handleMessage(connection, data)
-      } catch (error) {
-        server.log.error('WebSocket message error:', error)
+      } catch (error: any) {
+        server.log.error(`WebSocket message error: ${(error as Error).message}`)
       }
     })
   })
@@ -98,12 +98,12 @@ server.get('/health', async (request, reply) => {
     health.status = overallHealthy ? 'healthy' : 'degraded'
 
     return reply.code(overallHealthy ? 200 : 503).send(health)
-  } catch (error) {
-    server.log.error('Health check failed:', error)
+  } catch (error: any) {
+    server.log.error(`Health check failed: ${(error as Error).message}`)
     return reply.code(503).send({
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
-      error: error.message
+      error: (error as Error).message
     })
   }
 })
@@ -125,8 +125,8 @@ server.get('/agents', async (request, reply) => {
     combinedAgents.total = (combinedAgents.nodejs?.length || 0) + (combinedAgents.go?.length || 0)
 
     return reply.send(combinedAgents)
-  } catch (error) {
-    server.log.error('Failed to fetch agents:', error)
+  } catch (error: any) {
+    server.log.error(`Failed to fetch agents: ${(error as Error).message}`)
     return reply.code(500).send({ error: 'Failed to fetch agents' })
   }
 })
@@ -168,9 +168,9 @@ server.post('/agents/execute', async (request, reply) => {
     await metricsCollector.recordTaskExecution(agentType, result.success, result.duration)
 
     return reply.send(result)
-  } catch (error) {
-    server.log.error('Task execution failed:', error)
-    return reply.code(500).send({ error: 'Task execution failed', details: error.message })
+  } catch (error: any) {
+    server.log.error(`Task execution failed: ${(error as Error).message}`)
+    return reply.code(500).send({ error: 'Task execution failed', details: (error as Error).message })
   }
 })
 
@@ -191,8 +191,8 @@ server.get('/metrics', async (request, reply) => {
     }
 
     return reply.send(metrics)
-  } catch (error) {
-    server.log.error('Failed to collect metrics:', error)
+  } catch (error: any) {
+    server.log.error(`Failed to collect metrics: ${(error as Error).message}`)
     return reply.code(500).send({ error: 'Failed to collect metrics' })
   }
 })
@@ -202,8 +202,8 @@ server.get('/status', async (request, reply) => {
   try {
     const status = await agentOrchestrator.getSystemStatus()
     return reply.send(status)
-  } catch (error) {
-    server.log.error('Failed to get system status:', error)
+  } catch (error: any) {
+    server.log.error(`Failed to get system status: ${(error as Error).message}`)
     return reply.code(500).send({ error: 'Failed to get system status' })
   }
 })
@@ -234,9 +234,9 @@ server.post('/workflows/execute', async (request, reply) => {
     })
 
     return reply.send(result)
-  } catch (error) {
-    server.log.error('Workflow execution failed:', error)
-    return reply.code(500).send({ error: 'Workflow execution failed', details: error.message })
+  } catch (error: any) {
+    server.log.error(`Workflow execution failed: ${(error as Error).message}`)
+    return reply.code(500).send({ error: 'Workflow execution failed', details: (error as Error).message })
   }
 })
 
@@ -261,8 +261,8 @@ const start = async () => {
     server.log.info(`   - Node.js Agents: ${config.nodeAgentsEndpoint}`)
     server.log.info(`   - Go URN-MAESTRO: ${config.maestroEndpoint}`)
     server.log.info(`   - Redis: ${config.redisUrl}`)
-  } catch (error) {
-    server.log.error(error)
+  } catch (error: any) {
+    server.log.error((error as Error).message)
     process.exit(1)
   }
 }

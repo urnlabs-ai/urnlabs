@@ -16,7 +16,6 @@ export class QueueManager extends EventEmitter {
   private redis: Redis;
   private taskQueue: Queue<TaskJob>;
   private taskWorker: Worker<TaskJob>;
-  private isProcessing: boolean = false;
   private orchestrator: any; // Will be set via dependency injection
 
   constructor(redisUrl: string) {
@@ -24,7 +23,7 @@ export class QueueManager extends EventEmitter {
     
     // Initialize Redis connection
     this.redis = new Redis(redisUrl, {
-      retryDelayOnFailure: queueConfig.redis.retryDelayOnFailure,
+      // retryDelayOnFailure: queueConfig.redis.retryDelayOnFailure,
       maxRetriesPerRequest: queueConfig.redis.maxRetriesPerRequest,
       lazyConnect: true,
     });
@@ -57,7 +56,6 @@ export class QueueManager extends EventEmitter {
   async startProcessing(): Promise<void> {
     try {
       // Redis connection is handled automatically by BullMQ
-      this.isProcessing = true;
       
       logger.info('Queue manager started processing tasks');
     } catch (error) {
@@ -68,7 +66,6 @@ export class QueueManager extends EventEmitter {
 
   async shutdown(): Promise<void> {
     try {
-      this.isProcessing = false;
       
       await this.taskWorker.close();
       await this.taskQueue.close();

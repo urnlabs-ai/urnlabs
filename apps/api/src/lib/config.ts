@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   // Server configuration
-  NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
+  NODE_ENV: z.enum(['development', 'staging', 'production', 'test']).default('development'),
   PORT: z.preprocess(
     () => process.env.PORT || process.env.API_PORT,
     z.coerce.number().default(3000)
@@ -64,13 +64,23 @@ const envSchema = z.object({
       return false;
     }
   }, { message: 'Invalid Redis URL' }).optional(),
+  REDIS_HOST: z.string().default('localhost'),
+  REDIS_PORT: z.coerce.number().default(6379),
+  REDIS_PASSWORD: z.string().optional(),
+  REDIS_DB: z.coerce.number().default(0),
+  REDIS_KEY_PREFIX: z.string().default('urnlabs:'),
   
   // Email service
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  
+
+  // Twilio (for SMS MFA)
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_PHONE_NUMBER: z.string().optional(),
+
   // File storage
   S3_BUCKET: z.string().optional(),
   S3_REGION: z.string().optional(),

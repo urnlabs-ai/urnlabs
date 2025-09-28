@@ -43,7 +43,7 @@ export async function requestLogger(
       ip: request.ip,
       userAgent: request.headers['user-agent'],
       contentLength: reply.getHeader('content-length'),
-      userId: request.user?.userId,
+      userId: (request.user as any)?.userId,
     };
 
     // Determine log level based on status code
@@ -62,7 +62,7 @@ export async function requestLogger(
         duration,
         {
           statusCode: reply.statusCode,
-          userId: request.user?.userId,
+          userId: (request.user as any)?.userId,
           slow: true,
         }
       );
@@ -102,7 +102,7 @@ export async function requestLogger(
       duration,
       ip: request.ip,
       userAgent: request.headers['user-agent'],
-      userId: request.user?.userId,
+      userId: (request.user as any)?.userId,
       error: {
         name: error.name,
         message: error.message,

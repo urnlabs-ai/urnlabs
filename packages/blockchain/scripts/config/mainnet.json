@@ -1,0 +1,35 @@
+{
+  "network": "mainnet",
+  "urnToken": {
+    "name": "Urn Token",
+    "symbol": "URN",
+    "initialSupply": "1000000"
+  },
+  "yieldFarm": {
+    "urnPerBlock": "1",
+    "bonusBlocks": 20000,
+    "emergencyWithdrawFee": 500
+  },
+  "liquidityManager": {
+    "positionManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
+    "swapRouter": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+    "quoter": "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6",
+    "managementFee": 100
+  },
+  "rewardDistributor": {
+    "rewardPerSecond": "0.1",
+    "durationDays": 365,
+    "inflationRate": 500,
+    "burnRate": 1000,
+    "treasuryRate": 2000
+  },
+  "addresses": {
+    "admin": "0x0000000000000000000000000000000000000000",
+    "feeRecipient": "0x0000000000000000000000000000000000000000",
+    "treasury": "0x0000000000000000000000000000000000000000"
+  },
+  "verification": {
+    "enabled": true,
+    "apiKey": "ETHERSCAN_API_KEY"
+  }
+}

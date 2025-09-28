@@ -2,6 +2,8 @@
 import { getSEO, formatPageTitle, type SEOProps } from '~/lib/seo';
 import { getOrganizationSchema } from '~/lib/schema';
 
+import Navigation from '~/components/Navigation.tsx';
+
 export interface Props extends Partial<SEOProps> {
   title: string;
   description: string;
@@ -73,6 +75,7 @@ const organizationSchema = getOrganizationSchema({
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   </head>
   <body class="bg-primary-bg text-text-light antialiased">
+    <Navigation client:load />
     <slot />
     
     <!-- Analytics -->

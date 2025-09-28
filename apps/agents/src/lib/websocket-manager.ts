@@ -1,5 +1,5 @@
 import { FastifyRequest } from 'fastify';
-import { SocketStream } from '@fastify/websocket';
+import { WebSocket } from 'ws';
 import { EventEmitter } from 'events';
 
 import { logger } from '@/lib/logger.js';
@@ -14,7 +14,7 @@ export interface WebSocketMessage {
 
 export interface ClientConnection {
   id: string;
-  socket: SocketStream;
+  socket: WebSocket;
   userId?: string;
   organizationId?: string;
   subscriptions: Set<string>;
@@ -42,7 +42,7 @@ export class WebSocketManager extends EventEmitter {
     // Close all connections
     for (const connection of this.connections.values()) {
       try {
-        connection.socket.end();
+        connection.socket.close();
       } catch (error) {
         logger.error(error, `Error closing WebSocket connection ${connection.id}`);
       }
@@ -54,7 +54,7 @@ export class WebSocketManager extends EventEmitter {
     logger.info('WebSocket manager shut down');
   }
 
-  handleConnection(connection: SocketStream, request: FastifyRequest): void {
+  handleConnection(connection: any, request: FastifyRequest): void {
     if (!this.isActive) {
       connection.end();
       return;
@@ -77,7 +77,7 @@ export class WebSocketManager extends EventEmitter {
     }, 'New WebSocket connection established');
 
     // Set up connection handlers
-    connection.on('message', (message) => {
+    connection.on('message', (message: any) => {
       this.handleMessage(connectionId, message);
     });
 
@@ -85,7 +85,7 @@ export class WebSocketManager extends EventEmitter {
       this.handleDisconnection(connectionId);
     });
 
-    connection.on('error', (error) => {
+    connection.on('error', (error: any) => {
       logger.error({
         connectionId,
         error: error.message,

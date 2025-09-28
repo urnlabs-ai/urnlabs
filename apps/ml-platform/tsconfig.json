@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/models/*": ["./src/models/*"],
+      "@/pipeline/*": ["./src/pipeline/*"],
+      "@/vector/*": ["./src/vector/*"],
+      "@/orchestrator/*": ["./src/orchestrator/*"],
+      "@/automl/*": ["./src/automl/*"],
+      "@/monitoring/*": ["./src/monitoring/*"],
+      "@/types/*": ["./src/types/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+}

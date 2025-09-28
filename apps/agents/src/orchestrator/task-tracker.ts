@@ -62,7 +62,7 @@ export class TaskTracker extends EventEmitter {
     
     const task: Task = {
       id: taskId,
-      workflowRunId: options.workflowRunId,
+      workflowRunId: options.workflowRunId as any,
       agentId,
       type,
       status: 'pending',
@@ -72,7 +72,7 @@ export class TaskTracker extends EventEmitter {
         createdAt: new Date(),
         retryCount: 0,
         maxRetries: options.maxRetries || 3,
-        timeoutMs: options.timeoutMs,
+        timeoutMs: options.timeoutMs as any,
       },
     };
 
@@ -213,10 +213,10 @@ export class TaskTracker extends EventEmitter {
 
     task.metadata.retryCount++;
     task.status = 'pending';
-    task.error = undefined;
-    task.output = undefined;
-    task.metadata.startedAt = undefined;
-    task.metadata.completedAt = undefined;
+    task.error = undefined as any;
+    task.output = undefined as any;
+    task.metadata.startedAt = undefined as any;
+    task.metadata.completedAt = undefined as any;
 
     this.emit('task:retried', { taskId, retryCount: task.metadata.retryCount });
     
@@ -303,7 +303,7 @@ export class TaskTracker extends EventEmitter {
     
     let cleanedCount = 0;
     
-    for (const [taskId, task] of this.tasks.entries()) {
+    for (const [, task] of this.tasks.entries()) {
       if (
         (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') &&
         task.metadata.completedAt &&

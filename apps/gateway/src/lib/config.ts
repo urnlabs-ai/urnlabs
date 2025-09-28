@@ -96,14 +96,77 @@ export const config: GatewayConfig = {
     perUser: {
       max: parseInt(process.env.RATE_LIMIT_USER_MAX || '1000'),
       timeWindow: parseInt(process.env.RATE_LIMIT_USER_WINDOW || '60000') // 1 minute
+    },
+    advanced: {
+      global: {
+        id: 'global',
+        name: 'Global Rate Limit',
+        algorithm: 'sliding-window' as const,
+        windowSize: parseInt(process.env.RATE_LIMIT_GLOBAL_WINDOW || '60'), // seconds
+        maxRequests: parseInt(process.env.RATE_LIMIT_GLOBAL_MAX || '10000'),
+        keyGenerator: 'composite' as const,
+        headers: true,
+        message: 'Too many requests from this origin',
+        statusCode: 429
+      },
+      perUser: {
+        id: 'per-user',
+        name: 'Per User Rate Limit',
+        algorithm: 'token-bucket' as const,
+        windowSize: parseInt(process.env.RATE_LIMIT_USER_WINDOW || '60'), // seconds
+        maxRequests: parseInt(process.env.RATE_LIMIT_USER_MAX || '1000'),
+        keyGenerator: 'user' as const,
+        headers: true,
+        message: 'Too many requests for this user',
+        statusCode: 429
+      },
+      perEndpoint: {
+        id: 'per-endpoint',
+        name: 'Per Endpoint Rate Limit',
+        algorithm: 'fixed-window' as const,
+        windowSize: parseInt(process.env.RATE_LIMIT_ENDPOINT_WINDOW || '60'), // seconds
+        maxRequests: parseInt(process.env.RATE_LIMIT_ENDPOINT_MAX || '500'),
+        keyGenerator: 'endpoint' as const,
+        headers: true,
+        message: 'Too many requests to this endpoint',
+        statusCode: 429
+      },
+      perIp: {
+        id: 'per-ip',
+        name: 'Per IP Rate Limit',
+        algorithm: 'sliding-window' as const,
+        windowSize: parseInt(process.env.RATE_LIMIT_IP_WINDOW || '60'), // seconds
+        maxRequests: parseInt(process.env.RATE_LIMIT_IP_MAX || '2000'),
+        keyGenerator: 'ip' as const,
+        headers: true,
+        message: 'Too many requests from this IP address',
+        statusCode: 429
+      },
+      bypass: {
+        adminUsers: (process.env.RATE_LIMIT_BYPASS_USERS || '').split(',').filter(Boolean),
+        monitoringIps: (process.env.RATE_LIMIT_BYPASS_IPS || '127.0.0.1,::1').split(','),
+        internalServices: ['urnlabs-monitoring', 'urnlabs-health-check', 'prometheus'],
+        bypassHeader: 'x-bypass-rate-limit'
+      }
     }
   },
 
   cors: {
-    origin: process.env.NODE_ENV === 'production' 
+    origin: process.env.NODE_ENV === 'production'
       ? (process.env.CORS_ORIGINS?.split(',') || false)
       : true,
     credentials: true
+  },
+
+  cache: {
+    enabled: process.env.CACHE_ENABLED !== 'false',
+    defaultTtl: parseInt(process.env.CACHE_DEFAULT_TTL || '300'), // 5 minutes
+    maxSize: parseInt(process.env.CACHE_MAX_SIZE || '1048576'), // 1MB
+    policies: [], // Will be populated by CacheManager
+    redis: {
+      keyPrefix: 'urnlabs:cache:',
+      compressionEnabled: process.env.CACHE_COMPRESSION_ENABLED !== 'false'
+    }
   }
 };
 

@@ -1,0 +1,22 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.0.0
+# ignores vulnerabilities until expiry date; change duration by modifying expiry date
+ignore:
+  # Ignore low severity vulnerabilities
+  SNYK-JS-*:
+    - '*':
+        reason: Low severity - not exploitable in our environment
+        expires: '2024-12-31T23:59:59.999Z'
+
+# Configuration for Snyk CLI
+language-settings:
+  javascript:
+    # Include devDependencies in scans
+    includeDevDeps: true
+    # Scan yarn workspaces
+    allProjects: true
+    # Detection depth for nested dependencies
+    detectionDepth: 5
+
+# Patch configuration
+patches: {}

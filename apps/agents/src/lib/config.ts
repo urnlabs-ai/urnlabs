@@ -3,19 +3,36 @@ import { z } from 'zod';
 const envSchema = z.object({
   // Server configuration
   NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
-  AGENT_SERVICE_PORT: z.coerce.number().default(3001),
+  AGENT_SERVICE_PORT: z.preprocess(
+    () => process.env.PORT || process.env.AGENT_SERVICE_PORT,
+    z.coerce.number().default(3001)
+  ),
   HOST: z.string().default('localhost'),
   
   // Database
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.string().refine(val => {
+    try {
+      new URL(val);
+      return true;
+    } catch {
+      return false;
+    }
+  }, { message: 'Invalid database URL' }),
   
   // Redis (required for agent queues)
-  REDIS_URL: z.string().url(),
+  REDIS_URL: z.string().refine(val => {
+    try {
+      new URL(val);
+      return true;
+    } catch {
+      return false;
+    }
+  }, { message: 'Invalid Redis URL' }),
   
   // AI Services
-  CLAUDE_API_KEY: z.string(),
+  CLAUDE_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
-  ANTHROPIC_API_KEY: z.string().optional(), // Alternative to CLAUDE_API_KEY
+  ANTHROPIC_API_KEY: z.string().optional(),
   
   // Agent configuration
   AGENT_QUEUE_CONCURRENCY: z.coerce.number().default(5),
@@ -32,8 +49,8 @@ const envSchema = z.object({
   
   // Monitoring
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
-  METRICS_ENABLED: z.boolean().default(true),
-  PERFORMANCE_MONITORING: z.boolean().default(true),
+  METRICS_ENABLED: z.coerce.boolean().default(true),
+  PERFORMANCE_MONITORING: z.coerce.boolean().default(true),
   
   // Security
   JWT_SECRET: z.string().optional(),
@@ -45,10 +62,13 @@ const envSchema = z.object({
   SLACK_WEBHOOK_URL: z.string().optional(),
   
   // Feature flags
-  ENABLE_WEBSOCKETS: z.boolean().default(true),
-  ENABLE_REAL_TIME_MONITORING: z.boolean().default(true),
-  ENABLE_WORKFLOW_CACHING: z.boolean().default(true),
-  ENABLE_AGENT_LEARNING: z.boolean().default(false),
+  ENABLE_WEBSOCKETS: z.coerce.boolean().default(true),
+  ENABLE_REAL_TIME_MONITORING: z.coerce.boolean().default(true),
+  ENABLE_WORKFLOW_CACHING: z.coerce.boolean().default(true),
+  ENABLE_AGENT_LEARNING: z.coerce.boolean().default(false),
+}).refine(data => data.CLAUDE_API_KEY || data.ANTHROPIC_API_KEY, {
+  message: 'Either CLAUDE_API_KEY or ANTHROPIC_API_KEY must be provided',
+  path: ['CLAUDE_API_KEY'],
 });
 
 function validateEnv() {
@@ -56,21 +76,19 @@ function validateEnv() {
     return envSchema.parse(process.env);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const missingVars = error.errors
-        .filter(err => err.code === 'invalid_type')
-        .map(err => err.path.join('.'));
-      
       console.error('❌ Agent Service environment validation failed:');
-      console.error('Missing required environment variables:', missingVars);
+      error.errors.forEach(err => {
+        console.error(`- ${err.path.join('.')}: ${err.message} (${err.code})`);
+      });
       console.error('\n📋 Required variables:');
       console.error('- DATABASE_URL: PostgreSQL connection string');
       console.error('- REDIS_URL: Redis connection string for queues');
-      console.error('- CLAUDE_API_KEY: Anthropic Claude API key');
+      console.error('- CLAUDE_API_KEY or ANTHROPIC_API_KEY: Anthropic Claude API key');
       console.error('\n📋 Optional variables:');
       console.error('- OPENAI_API_KEY: OpenAI API key for additional models');
       console.error('- GITHUB_TOKEN: For GitHub integration');
       console.error('- SLACK_BOT_TOKEN: For Slack notifications');
-      
+
       process.exit(1);
     }
     throw error;
@@ -104,12 +122,15 @@ export const agentConfig = {
 } as const;
 
 // Queue configuration
+const redisUrl = new URL(config.REDIS_URL);
+const dbIndex = redisUrl.pathname.slice(1) ? parseInt(redisUrl.pathname.slice(1)) : 0;
+
 export const queueConfig = {
   redis: {
-    host: new URL(config.REDIS_URL).hostname,
-    port: parseInt(new URL(config.REDIS_URL).port) || 6379,
-    password: new URL(config.REDIS_URL).password || undefined,
-    db: 0,
+    host: redisUrl.hostname,
+    port: parseInt(redisUrl.port) || 6379,
+    password: redisUrl.password || undefined,
+    db: dbIndex,
     retryDelayOnFailure: 5000,
     maxRetriesPerRequest: null, // Required by BullMQ for blocking operations
   },
@@ -129,7 +150,7 @@ export const queueConfig = {
 // AI model configuration
 export const modelConfig = {
   claude: {
-    apiKey: config.CLAUDE_API_KEY,
+    apiKey: config.CLAUDE_API_KEY || config.ANTHROPIC_API_KEY,
     model: 'claude-3-5-sonnet-20241022',
     maxTokens: 4096,
     temperature: 0.1,

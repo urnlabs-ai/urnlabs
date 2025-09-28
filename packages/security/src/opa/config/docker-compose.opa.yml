@@ -1,0 +1,187 @@
+version: '3.8'
+
+services:
+  opa-server:
+    image: openpolicyagent/opa:latest
+    container_name: urnlabs-opa-server
+    ports:
+      - "8181:8181"  # OPA HTTP API
+      - "8282:8282"  # OPA Diagnostics/Metrics
+      - "9191:9191"  # Envoy External Auth GRPC
+    command:
+      - "run"
+      - "--server"
+      - "--config-file=/config/opa-server.yaml"
+      - "--addr=0.0.0.0:8181"
+      - "--diagnostic-addr=0.0.0.0:8282"
+      - "--log-level=info"
+      - "--log-format=json"
+      - "/policies"
+    volumes:
+      - ./config/opa-server.yaml:/config/opa-server.yaml:ro
+      - ./policies:/policies:ro
+      - ./data:/data
+      - opa-bundles:/bundles
+    environment:
+      - OPA_LOG_LEVEL=info
+      - OPA_LOG_FORMAT=json
+      - DECISION_LOGGER_TOKEN=${DECISION_LOGGER_TOKEN:-default-token}
+      - STATUS_LOGGER_TOKEN=${STATUS_LOGGER_TOKEN:-default-token}
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8181/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - urnlabs-security
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  opa-bundle-server:
+    image: nginx:alpine
+    container_name: urnlabs-opa-bundle-server
+    ports:
+      - "8080:80"
+    volumes:
+      - ./bundles:/usr/share/nginx/html/bundles:ro
+      - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - urnlabs-security
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  opa-decision-logger:
+    build:
+      context: .
+      dockerfile: Dockerfile.decision-logger
+    container_name: urnlabs-opa-decision-logger
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - DECISION_LOG_DIRECTORY=/logs
+      - AUDIT_LOG_ENDPOINT=http://security-service:3000/audit
+      - ENCRYPT_LOGS=true
+      - MAX_LOGS_IN_MEMORY=50000
+    volumes:
+      - opa-decision-logs:/logs
+      - ./config/decision-logger.config.json:/app/config.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    depends_on:
+      - opa-server
+    networks:
+      - urnlabs-security
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis-opa-cache:
+    image: redis:7-alpine
+    container_name: urnlabs-opa-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - opa-redis-data:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - urnlabs-security
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: urnlabs-opa-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    depends_on:
+      - opa-server
+    networks:
+      - urnlabs-security
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: urnlabs-opa-grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=urnlabs-opa-admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    networks:
+      - urnlabs-security
+
+volumes:
+  opa-bundles:
+    driver: local
+  opa-decision-logs:
+    driver: local
+  opa-redis-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  urnlabs-security:
+    driver: bridge
+    external: false

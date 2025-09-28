@@ -12,12 +12,6 @@ const CreateTaskSchema = z.object({
   deadline: z.string().datetime().optional()
 });
 
-const TaskQuerySchema = z.object({
-  status: z.enum(['pending', 'processing', 'completed', 'failed']).optional(),
-  agentId: z.string().optional(),
-  limit: z.coerce.number().min(1).max(100).default(20),
-  offset: z.coerce.number().min(0).default(0)
-});
 
 /**
  * AI Agent management API routes for URN Labs AI Platform
@@ -71,7 +65,7 @@ export async function aiAgentRoutes(fastify: FastifyInstance) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (_request, reply) => {
     try {
       const agents = await agentManager.listAgents();
       const agentData = await Promise.all(
@@ -84,7 +78,7 @@ export async function aiAgentRoutes(fastify: FastifyInstance) {
             name: agent.config.name,
             role: agent.config.role,
             status: health.status,
-            capabilities: agent.config.capabilities.map(cap => cap.name),
+            capabilities: agent.config.capabilities.map((cap: any) => cap.name),
             metrics: {
               tasksCompleted: metrics.tasksCompleted,
               successRate: Math.round(metrics.successRate),
@@ -125,9 +119,9 @@ export async function aiAgentRoutes(fastify: FastifyInstance) {
         required: ['agentId']
       }
     }
-  }, async (request, reply) => {
+  }, async (_request, reply) => {
     try {
-      const { agentId } = request.params;
+      const { agentId } = _request.params;
       const agent = await agentManager.getAgent(agentId);
       
       if (!agent) {
@@ -198,19 +192,19 @@ export async function aiAgentRoutes(fastify: FastifyInstance) {
         required: ['type', 'payload']
       }
     }
-  }, async (request, reply) => {
+  }, async (_request, reply) => {
     try {
-      const validatedBody = CreateTaskSchema.parse(request.body);
+      const validatedBody = CreateTaskSchema.parse(_request.body);
       
       const taskData = {
         ...validatedBody,
         deadline: validatedBody.deadline ? new Date(validatedBody.deadline) : undefined,
         context: {
-          userId: (request as any).user?.id || 'anonymous',
-          sessionId: request.id,
+          userId: (_request as any).user?.id || 'anonymous',
+          sessionId: _request.id,
           timestamp: new Date(),
-          ip: request.ip,
-          userAgent: request.headers['user-agent']
+          ip: _request.ip,
+          userAgent: _request.headers['user-agent']
         }
       };
 
@@ -265,9 +259,9 @@ export async function aiAgentRoutes(fastify: FastifyInstance) {
         required: ['taskId']
       }
     }
-  }, async (request, reply) => {
+  }, async (_request, reply) => {
     try {
-      const { taskId } = request.params;
+      const { taskId } = _request.params;
       const taskStatus = await agentManager.getTaskStatus(taskId);
 
       return {
@@ -323,7 +317,7 @@ export async function aiAgentRoutes(fastify: FastifyInstance) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (_request, reply) => {
     try {
       const health = await agentManager.getSystemHealth();
 

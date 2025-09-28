@@ -1,18 +1,108 @@
 {
   "name": "@urnlabs/testing",
   "version": "1.0.0",
-  "description": "Testing & Quality Assurance Service",
+  "description": "Comprehensive Testing & Quality Assurance Framework",
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:watch": "vitest --watch",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:contract": "pact-broker can-i-deploy && pact verify",
+    "test:all": "pnpm run test:run && pnpm run test:integration && pnpm run test:e2e",
+    "quality:check": "tsx src/cli/quality-gates-cli.ts check --verbose",
+    "quality:init": "tsx src/cli/quality-gates-cli.ts init",
+    "quality:report": "tsx src/cli/quality-gates-cli.ts report",
+    "pipeline:run": "tsx src/cli/test-pipeline-cli.ts run",
+    "pipeline:run:full": "tsx src/cli/test-pipeline-cli.ts run --performance --security --data-management",
+    "pipeline:status": "tsx src/cli/test-pipeline-cli.ts status",
+    "pipeline:init": "tsx src/cli/test-pipeline-cli.ts init",
+    "pipeline:jobs": "tsx src/cli/test-pipeline-cli.ts jobs",
+    "data:generate": "tsx src/cli/test-data-cli.ts generate",
+    "data:mask": "tsx src/cli/test-data-cli.ts mask",
+    "data:seed": "tsx src/cli/test-data-cli.ts seed",
+    "data:performance": "tsx src/cli/test-data-cli.ts performance",
+    "data:validate": "tsx src/cli/test-data-cli.ts validate",
+    "data:schemas": "tsx src/cli/test-data-cli.ts schemas",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "security:scan": "snyk test",
+    "test:security": "tsx src/cli/security-test-cli.ts run",
+    "test:security:static": "tsx src/cli/security-test-cli.ts run --type=static",
+    "test:security:dynamic": "tsx src/cli/security-test-cli.ts run --type=dynamic",
+    "test:security:dependencies": "tsx src/cli/security-test-cli.ts run --type=dependencies",
+    "test:security:secrets": "tsx src/cli/security-test-cli.ts run --type=secrets",
+    "test:security:penetration": "tsx src/cli/security-test-cli.ts run --type=penetration",
+    "test:security:compliance": "tsx src/cli/security-test-cli.ts run --type=compliance",
+    "test:security:threat-detection": "tsx src/cli/security-test-cli.ts run --type=threat-detection",
+    "test:security:infrastructure": "tsx src/cli/security-test-cli.ts run --type=infrastructure",
+    "test:security:gates": "tsx src/cli/security-test-cli.ts gates",
+    "test:security:report": "tsx src/cli/security-test-cli.ts report",
+    "test:vulnerabilities": "tsx src/cli/security-test-cli.ts vulnerabilities",
+    "test:compliance": "tsx src/cli/security-test-cli.ts compliance",
+    "test:penetration": "tsx src/cli/security-test-cli.ts penetration",
+    "lint:security": "eslint src/**/*.ts --config .eslintrc.security.js"
   },
   "dependencies": {
-    "fastify": "^4.24.3"
+    "fastify": "^4.24.3",
+    "@fastify/cors": "^8.4.0",
+    "@fastify/helmet": "^11.1.1",
+    "@fastify/swagger": "^8.12.0",
+    "@fastify/swagger-ui": "^2.1.0",
+    "zod": "^3.22.4",
+    "redis": "^4.6.12",
+    "pg": "^8.11.3",
+    "prisma": "^5.7.1",
+    "@prisma/client": "^5.7.1"
   },
   "devDependencies": {
     "tsx": "^4.6.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0",
+    "@vitest/coverage-v8": "^1.1.0",
+    "@vitest/ui": "^1.1.0",
+    "supertest": "^6.3.3",
+    "@types/supertest": "^6.0.2",
+    "@playwright/test": "^1.40.1",
+    "@pact-foundation/pact": "^12.1.0",
+    "@pact-foundation/pact-node": "^10.17.7",
+    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^6.18.1",
+    "@typescript-eslint/parser": "^6.18.1",
+    "eslint-plugin-security": "^1.7.1",
+    "snyk": "^1.1266.0",
+    "faker": "^6.6.6",
+    "@types/faker": "^6.6.9",
+    "msw": "^2.0.11",
+    "happy-dom": "^12.10.3",
+    "c8": "^9.0.0",
+    "commander": "^11.1.0",
+    "@types/commander": "^2.12.2"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./fixtures": {
+      "import": "./dist/fixtures/index.js",
+      "require": "./dist/fixtures/index.js"
+    },
+    "./mocks": {
+      "import": "./dist/mocks/index.js",
+      "require": "./dist/mocks/index.js"
+    },
+    "./utils": {
+      "import": "./dist/utils/index.js",
+      "require": "./dist/utils/index.js"
+    }
   }
 }

@@ -1,0 +1,59 @@
+{
+  "name": "@urnlabs/security-scanner",
+  "version": "1.0.0",
+  "description": "Automated vulnerability scanning pipeline service for Urnlabs AI Platform",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src/**/*.ts",
+    "scan:dependencies": "node dist/scanners/dependency-scanner.js",
+    "scan:secrets": "node dist/scanners/secret-scanner.js",
+    "scan:sast": "node dist/scanners/sast-scanner.js",
+    "scan:dast": "node dist/scanners/dast-scanner.js",
+    "scan:all": "node dist/orchestrator/scan-orchestrator.js"
+  },
+  "dependencies": {
+    "fastify": "^4.24.3",
+    "@fastify/swagger": "^8.12.0",
+    "@fastify/swagger-ui": "^2.1.0",
+    "@fastify/cors": "^8.4.0",
+    "@fastify/helmet": "^11.1.1",
+    "@fastify/rate-limit": "^8.0.3",
+    "zod": "^3.22.4",
+    "redis": "^4.6.10",
+    "prisma": "^5.6.0",
+    "@prisma/client": "^5.6.0",
+    "winston": "^3.11.0",
+    "axios": "^1.6.2",
+    "node-cron": "^3.0.3",
+    "bullmq": "^4.15.1",
+    "semver": "^7.5.4",
+    "js-yaml": "^4.1.0",
+    "lodash": "^4.17.21",
+    "date-fns": "^2.30.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.9.0",
+    "@types/lodash": "^4.14.202",
+    "@types/js-yaml": "^4.0.9",
+    "@types/uuid": "^9.0.7",
+    "@types/node-cron": "^3.0.11",
+    "@types/semver": "^7.5.6",
+    "typescript": "^5.2.2",
+    "tsx": "^4.1.4",
+    "vitest": "^0.34.6",
+    "@vitest/coverage-v8": "^0.34.6",
+    "eslint": "^8.54.0",
+    "@typescript-eslint/eslint-plugin": "^6.12.0",
+    "@typescript-eslint/parser": "^6.12.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

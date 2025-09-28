@@ -1,41 +1,39 @@
 {
-  "name": "website-platform-monorepo",
+  "name": "urnlabs-ai-monorepo",
   "version": "1.0.0",
-  "description": "Ultra-comprehensive 3-website platform with specialized agent coordination",
+  "description": "URN Labs AI agent platform monorepo (apps + packages)",
   "private": true,
   "type": "module",
   "workspaces": [
-    "worktrees/usmanramzan-ai",
-    "worktrees/urnlabs-ai", 
-    "worktrees/eprecisio-com",
-    "worktrees/shared-components",
-    "worktrees/design-system",
+    "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "dev:usmanramzan": "cd worktrees/usmanramzan-ai && npm run dev",
-    "dev:urnlabs": "cd worktrees/urnlabs-ai && npm run dev", 
-    "dev:eprecisio": "cd worktrees/eprecisio-com && npm run dev",
-    "build:all": "npm run build:usmanramzan && npm run build:urnlabs && npm run build:eprecisio",
-    "build:usmanramzan": "cd worktrees/usmanramzan-ai && npm run build",
-    "build:urnlabs": "cd worktrees/urnlabs-ai && npm run build",
-    "build:eprecisio": "cd worktrees/eprecisio-com && npm run build",
-    "status": "./scripts/status-all-websites.sh",
-    "sync": "./scripts/sync-all-websites.sh",
-    "deploy:all": "npm run build:all && cd worktrees/infrastructure && npm run deploy:all"
+    "build:packages": "pnpm -r --filter './packages/**' build",
+    "build:apps": "pnpm -r --filter './apps/**' build",
+    "build:all": "pnpm run build:packages && pnpm run build:apps",
+    "dev:api": "pnpm --filter @urnlabs/api dev",
+    "dev:agents": "pnpm --filter @urnlabs/agents dev",
+    "dev:bridge": "pnpm --filter @urnlabs/bridge dev",
+    "test:all": "pnpm -r test"
   },
   "devDependencies": {
     "@types/node": "^20.10.5",
+    "pnpm": "^9.0.0",
+    "tsc-alias": "^1.8.8",
+    "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   },
   "keywords": [
-    "website-platform",
-    "astro", 
-    "react",
-    "glassmorphism",
-    "s3-deployment",
-    "cdn-optimization",
-    "agent-coordination"
+    "ai",
+    "agents",
+    "pnpm",
+    "workspaces",
+    "docker",
+    "fastify",
+    "prisma",
+    "redis",
+    "typescript"
   ],
   "author": "Muhammad Usman Ramzan",
   "license": "MIT"

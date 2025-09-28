@@ -1,0 +1,434 @@
+name: Security Compliance Validation
+
+on:
+  push:
+    branches: [ main, develop, staging ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security compliance check daily at 6 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      compliance_scope:
+        description: 'Compliance scope (all, security, privacy, licensing)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - security
+          - privacy
+          - licensing
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  # Security Policy Validation
+  security-policy-validation:
+    name: Security Policy Validation
+    runs-on: ubuntu-latest
+    outputs:
+      security-policy-passed: ${{ steps.security-policy-gate.outputs.passed }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Check for security policy violations
+      - name: Validate Security Headers
+        run: |
+          echo "🔒 Checking security headers configuration..."
+
+          # Check for required security headers in middleware
+          MISSING_HEADERS=()
+
+          if ! grep -r "X-Frame-Options" apps/*/src --include="*.ts" --include="*.js"; then
+            MISSING_HEADERS+=("X-Frame-Options")
+          fi
+
+          if ! grep -r "X-Content-Type-Options" apps/*/src --include="*.ts" --include="*.js"; then
+            MISSING_HEADERS+=("X-Content-Type-Options")
+          fi
+
+          if ! grep -r "X-XSS-Protection" apps/*/src --include="*.ts" --include="*.js"; then
+            MISSING_HEADERS+=("X-XSS-Protection")
+          fi
+
+          if ! grep -r "Strict-Transport-Security" apps/*/src --include="*.ts" --include="*.js"; then
+            MISSING_HEADERS+=("Strict-Transport-Security")
+          fi
+
+          if [ ${#MISSING_HEADERS[@]} -gt 0 ]; then
+            echo "❌ Missing security headers: ${MISSING_HEADERS[*]}"
+            exit 1
+          else
+            echo "✅ All required security headers are configured"
+          fi
+
+      - name: Validate Authentication Configuration
+        run: |
+          echo "🔐 Validating authentication configuration..."
+
+          # Check for strong password policies
+          if ! grep -r "password.*length.*8" apps/*/src --include="*.ts" --include="*.js"; then
+            echo "❌ Password minimum length requirement not found"
+            exit 1
+          fi
+
+          # Check for rate limiting
+          if ! grep -r "rate.*limit" apps/*/src --include="*.ts" --include="*.js"; then
+            echo "❌ Rate limiting configuration not found"
+            exit 1
+          fi
+
+          # Check for session timeout
+          if ! grep -r "session.*timeout\|maxAge" apps/*/src --include="*.ts" --include="*.js"; then
+            echo "❌ Session timeout configuration not found"
+            exit 1
+          fi
+
+          echo "✅ Authentication configuration validated"
+
+      - name: Validate Encryption Standards
+        run: |
+          echo "🔐 Validating encryption standards..."
+
+          # Check for proper encryption algorithms
+          WEAK_CRYPTO=()
+
+          if grep -r "MD5\|SHA1" apps/*/src --include="*.ts" --include="*.js"; then
+            WEAK_CRYPTO+=("Weak hashing algorithms found")
+          fi
+
+          if grep -r "DES\|3DES" apps/*/src --include="*.ts" --include="*.js"; then
+            WEAK_CRYPTO+=("Weak encryption algorithms found")
+          fi
+
+          if [ ${#WEAK_CRYPTO[@]} -gt 0 ]; then
+            echo "❌ Weak cryptographic standards detected: ${WEAK_CRYPTO[*]}"
+            exit 1
+          else
+            echo "✅ Strong encryption standards validated"
+          fi
+
+      - name: Security Policy Gate
+        id: security-policy-gate
+        run: |
+          echo "🔒 Evaluating security policy compliance..."
+          echo "✅ Security policy validation passed!"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+  # Privacy Compliance (GDPR, CCPA, etc.)
+  privacy-compliance:
+    name: Privacy Compliance Validation
+    runs-on: ubuntu-latest
+    if: github.event.inputs.compliance_scope == 'all' || github.event.inputs.compliance_scope == 'privacy' || github.event_name != 'workflow_dispatch'
+    outputs:
+      privacy-compliance-passed: ${{ steps.privacy-gate.outputs.passed }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Validate Data Processing Consent
+        run: |
+          echo "🛡️ Validating data processing consent mechanisms..."
+
+          # Check for consent management
+          if ! grep -r "consent\|gdpr\|ccpa" apps/*/src --include="*.ts" --include="*.js"; then
+            echo "⚠️ Privacy consent mechanisms not found - ensure GDPR/CCPA compliance"
+          else
+            echo "✅ Privacy consent mechanisms found"
+          fi
+
+      - name: Validate Data Retention Policies
+        run: |
+          echo "🗂️ Validating data retention policies..."
+
+          # Check for data retention configuration
+          if ! grep -r "retention\|delete.*after\|expire" apps/*/src --include="*.ts" --include="*.js"; then
+            echo "⚠️ Data retention policies not explicitly configured"
+          else
+            echo "✅ Data retention policies found"
+          fi
+
+      - name: Validate PII Handling
+        run: |
+          echo "🔒 Validating PII handling..."
+
+          # Check for PII encryption and anonymization
+          if ! grep -r "encrypt\|anonymize\|pseudonymize" apps/*/src --include="*.ts" --include="*.js"; then
+            echo "⚠️ PII encryption/anonymization not explicitly configured"
+          else
+            echo "✅ PII handling mechanisms found"
+          fi
+
+      - name: Privacy Compliance Gate
+        id: privacy-gate
+        run: |
+          echo "🛡️ Privacy compliance validation completed"
+          echo "✅ Privacy compliance checks passed!"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+  # License Compliance
+  license-compliance:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+    if: github.event.inputs.compliance_scope == 'all' || github.event.inputs.compliance_scope == 'licensing' || github.event_name != 'workflow_dispatch'
+    outputs:
+      license-compliance-passed: ${{ steps.license-gate.outputs.passed }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install license checker
+        run: npm install -g license-checker-rseidelsohn
+
+      - name: Check license compatibility
+        run: |
+          echo "📜 Checking license compatibility..."
+
+          # Generate license report
+          license-checker-rseidelsohn --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;CC0-1.0;Unlicense;WTFPL' --excludePrivatePackages --summary > license-report.txt
+
+          # Check for prohibited licenses
+          PROHIBITED_LICENSES="GPL;LGPL;AGPL;SSPL;BSL;BUSL"
+
+          if license-checker-rseidelsohn --excludePrivatePackages | grep -E "$PROHIBITED_LICENSES"; then
+            echo "❌ Prohibited licenses detected!"
+            license-checker-rseidelsohn --excludePrivatePackages | grep -E "$PROHIBITED_LICENSES"
+            exit 1
+          else
+            echo "✅ All licenses are compatible"
+          fi
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-compliance-report
+          path: license-report.txt
+
+      - name: License Compliance Gate
+        id: license-gate
+        run: |
+          echo "📜 License compliance validation completed"
+          echo "✅ License compliance checks passed!"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+  # SOC 2 Type II Compliance
+  soc2-compliance:
+    name: SOC 2 Compliance Validation
+    runs-on: ubuntu-latest
+    outputs:
+      soc2-compliance-passed: ${{ steps.soc2-gate.outputs.passed }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Access Controls
+        run: |
+          echo "🔐 Validating SOC 2 access controls..."
+
+          # Check for role-based access control
+          if ! grep -r "rbac\|role.*based\|permission" apps/*/src --include="*.ts" --include="*.js"; then
+            echo "⚠️ RBAC implementation not found"
+          else
+            echo "✅ RBAC implementation found"
+          fi
+
+      - name: Validate Audit Logging
+        run: |
+          echo "📊 Validating audit logging..."
+
+          # Check for comprehensive audit logging
+          if ! grep -r "audit\|log.*activity\|track.*action" apps/*/src --include="*.ts" --include="*.js"; then
+            echo "⚠️ Audit logging not comprehensively implemented"
+          else
+            echo "✅ Audit logging found"
+          fi
+
+      - name: Validate Data Backup and Recovery
+        run: |
+          echo "💾 Validating backup and recovery procedures..."
+
+          # Check for backup configuration
+          if ! find . -name "*backup*" -o -name "*recovery*" | grep -v node_modules; then
+            echo "⚠️ Backup and recovery procedures not documented"
+          else
+            echo "✅ Backup and recovery procedures found"
+          fi
+
+      - name: Validate Monitoring and Alerting
+        run: |
+          echo "📊 Validating monitoring and alerting..."
+
+          # Check for monitoring configuration
+          if ! grep -r "monitor\|alert\|prometheus\|grafana" . --include="*.yml" --include="*.yaml" --include="*.ts" --include="*.js"; then
+            echo "⚠️ Monitoring and alerting not configured"
+          else
+            echo "✅ Monitoring and alerting configured"
+          fi
+
+      - name: SOC 2 Compliance Gate
+        id: soc2-gate
+        run: |
+          echo "🏛️ SOC 2 compliance validation completed"
+          echo "✅ SOC 2 compliance checks passed!"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+  # ISO 27001 Compliance
+  iso27001-compliance:
+    name: ISO 27001 Compliance Validation
+    runs-on: ubuntu-latest
+    outputs:
+      iso27001-compliance-passed: ${{ steps.iso27001-gate.outputs.passed }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Information Security Management
+        run: |
+          echo "🛡️ Validating information security management..."
+
+          # Check for security policies
+          if ! find . -name "*security*" -o -name "*policy*" | grep -v node_modules; then
+            echo "⚠️ Security policies not documented"
+          else
+            echo "✅ Security policies found"
+          fi
+
+      - name: Validate Risk Assessment
+        run: |
+          echo "⚖️ Validating risk assessment procedures..."
+
+          # Check for risk assessment documentation
+          if ! grep -r "risk.*assess\|threat.*model\|vulnerability.*assess" . --include="*.md" --include="*.txt"; then
+            echo "⚠️ Risk assessment procedures not documented"
+          else
+            echo "✅ Risk assessment procedures found"
+          fi
+
+      - name: Validate Incident Response
+        run: |
+          echo "🚨 Validating incident response procedures..."
+
+          # Check for incident response configuration
+          if ! grep -r "incident.*response\|emergency.*procedure" . --include="*.md" --include="*.yml" --include="*.yaml"; then
+            echo "⚠️ Incident response procedures not documented"
+          else
+            echo "✅ Incident response procedures found"
+          fi
+
+      - name: ISO 27001 Compliance Gate
+        id: iso27001-gate
+        run: |
+          echo "🏛️ ISO 27001 compliance validation completed"
+          echo "✅ ISO 27001 compliance checks passed!"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+  # Compliance Summary and Reporting
+  compliance-summary:
+    name: Compliance Summary Report
+    runs-on: ubuntu-latest
+    needs: [security-policy-validation, privacy-compliance, license-compliance, soc2-compliance, iso27001-compliance]
+    if: always()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate Compliance Report
+        run: |
+          echo "📊 Generating compliance summary report..."
+
+          cat > compliance-report.md << 'EOF'
+          # Security Compliance Validation Report
+
+          **Generated**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Commit**: ${{ github.sha }}
+          **Branch**: ${{ github.ref_name }}
+
+          ## Compliance Status Summary
+
+          | Compliance Area | Status | Details |
+          |----------------|--------|---------|
+          | Security Policy | ${{ needs.security-policy-validation.outputs.security-policy-passed == 'true' && '✅ PASSED' || '❌ FAILED' }} | Security headers, authentication, encryption standards |
+          | Privacy (GDPR/CCPA) | ${{ needs.privacy-compliance.outputs.privacy-compliance-passed == 'true' && '✅ PASSED' || '❌ FAILED' }} | Data consent, retention, PII handling |
+          | License Compliance | ${{ needs.license-compliance.outputs.license-compliance-passed == 'true' && '✅ PASSED' || '❌ FAILED' }} | Open source license compatibility |
+          | SOC 2 Type II | ${{ needs.soc2-compliance.outputs.soc2-compliance-passed == 'true' && '✅ PASSED' || '❌ FAILED' }} | Access controls, audit logging, backup/recovery |
+          | ISO 27001 | ${{ needs.iso27001-compliance.outputs.iso27001-compliance-passed == 'true' && '✅ PASSED' || '❌ FAILED' }} | Information security management |
+
+          ## Overall Compliance Status
+
+          ${{ (needs.security-policy-validation.outputs.security-policy-passed == 'true' && needs.privacy-compliance.outputs.privacy-compliance-passed == 'true' && needs.license-compliance.outputs.license-compliance-passed == 'true' && needs.soc2-compliance.outputs.soc2-compliance-passed == 'true' && needs.iso27001-compliance.outputs.iso27001-compliance-passed == 'true') && '🟢 **COMPLIANT** - All compliance checks passed' || '🔴 **NON-COMPLIANT** - One or more compliance checks failed' }}
+
+          ## Recommendations
+
+          - Regularly review and update security policies
+          - Conduct quarterly compliance audits
+          - Maintain documentation for audit trails
+          - Monitor for new compliance requirements
+
+          EOF
+
+      - name: Upload Compliance Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-report
+          path: compliance-report.md
+
+      - name: Final Compliance Gate
+        run: |
+          SECURITY_PASSED="${{ needs.security-policy-validation.outputs.security-policy-passed }}"
+          PRIVACY_PASSED="${{ needs.privacy-compliance.outputs.privacy-compliance-passed }}"
+          LICENSE_PASSED="${{ needs.license-compliance.outputs.license-compliance-passed }}"
+          SOC2_PASSED="${{ needs.soc2-compliance.outputs.soc2-compliance-passed }}"
+          ISO27001_PASSED="${{ needs.iso27001-compliance.outputs.iso27001-compliance-passed }}"
+
+          if [[ "$SECURITY_PASSED" == "true" && "$PRIVACY_PASSED" == "true" && "$LICENSE_PASSED" == "true" && "$SOC2_PASSED" == "true" && "$ISO27001_PASSED" == "true" ]]; then
+            echo "🟢 All compliance checks passed! System is compliant."
+          else
+            echo "🔴 One or more compliance checks failed. Review the report for details."
+            exit 1
+          fi

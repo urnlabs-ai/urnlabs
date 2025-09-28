@@ -2,6 +2,11 @@
 
 **Production-ready AI agent orchestration platform** with deterministic workflows, governance-first approach, and measurable ROI. Transform your operations with intelligent automation and enterprise-grade security.
 
+## 🤝 Contributing
+
+- Read the contributor guide: [AGENTS.md](./AGENTS.md)
+- Follow shared linting/formatting via `@urnlabs/config` and keep PRs focused.
+
 ## 🏗️ Architecture
 
 This is a **production monorepo** containing:

@@ -1,0 +1,1 @@
+{"version":3,"file":"request-logger.d.ts","sourceRoot":"","sources":["request-logger.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,eAAe,EAAE,oBAAoB,EAAgC,MAAM,SAAS,CAAC;AAG9F,wBAAsB,aAAa,CACjC,OAAO,EAAE,eAAe,EACxB,KAAK,EAAE,oBAAoB,iBA2G5B;AAGD,OAAO,QAAQ,SAAS,CAAC;IACvB,UAAU,cAAc;QACtB,SAAS,CAAC,EAAE,MAAM,CAAC;KACpB;CACF"}

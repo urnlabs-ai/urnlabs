@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { z } from 'zod';
 
 export async function workflowsRoutes(
   fastify: FastifyInstance,

@@ -1,0 +1,1426 @@
+name: AI Agent Platform CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, staging ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+      deploy_services:
+        description: 'Services to deploy (comma-separated: api,agents,gateway,bridge,dashboard,all)'
+        required: false
+        default: 'all'
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  # Enhanced security scanning and vulnerability detection
+  security-scan:
+    name: Enhanced Security Scanning
+    runs-on: ubuntu-latest
+    outputs:
+      security-passed: ${{ steps.security-gate.outputs.passed }}
+      critical-vulnerabilities: ${{ steps.process-results.outputs.critical_count }}
+      scan-id: ${{ steps.generate-scan-id.outputs.scan_id }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate scan ID
+        id: generate-scan-id
+        run: |
+          SCAN_ID="ci-scan-$(date +%Y%m%d-%H%M%S)-${{ github.run_number }}"
+          echo "scan_id=$SCAN_ID" >> $GITHUB_OUTPUT
+          echo "🔍 Generated scan ID: $SCAN_ID"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Enhanced Snyk vulnerability scanning with detailed reporting
+      - name: Run Enhanced Snyk Security Scan
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          echo "🔍 Running enhanced Snyk security analysis..."
+
+          # Install Snyk CLI if not available
+          if ! command -v snyk &> /dev/null; then
+            npm install -g snyk@latest
+          fi
+
+          # Authenticate with Snyk
+          if [ -n "$SNYK_TOKEN" ]; then
+            snyk auth "$SNYK_TOKEN"
+          else
+            echo "⚠️ SNYK_TOKEN not provided - using anonymous scan"
+          fi
+
+          # Create output directory
+          mkdir -p security-scan-results
+
+          # Run Snyk test for all projects with detailed output
+          snyk test --all-projects --json > security-scan-results/snyk-detailed.json 2>/dev/null || true
+          snyk test --all-projects --sarif > security-scan-results/snyk-results.sarif 2>/dev/null || true
+
+          # Run Snyk code analysis (SAST)
+          snyk code test --json > security-scan-results/snyk-code.json 2>/dev/null || true
+          snyk code test --sarif > security-scan-results/snyk-code.sarif 2>/dev/null || true
+
+          # Generate vulnerability fix recommendations
+          snyk test --all-projects --json-file-output=security-scan-results/snyk-fix-recommendations.json 2>/dev/null || true
+
+      # Enhanced Trivy scanning with custom policies
+      - name: Run Enhanced Trivy Security Scan
+        run: |
+          echo "🔍 Running enhanced Trivy security analysis..."
+
+          # Create Trivy configuration
+          mkdir -p .trivy
+          cat > .trivy.yaml << 'EOF'
+          format: sarif
+          output: security-scan-results/trivy-comprehensive.sarif
+          exit-code: 0
+          severity:
+            - CRITICAL
+            - HIGH
+            - MEDIUM
+          ignore-unfixed: false
+          security-checks:
+            - vuln
+            - config
+            - secret
+          skip-dirs:
+            - node_modules
+            - .git
+            - dist
+            - build
+          skip-files:
+            - "**/*.test.ts"
+            - "**/*.test.js"
+            - "**/*.spec.ts"
+            - "**/*.spec.js"
+          EOF
+
+          # Run filesystem scan
+          trivy fs --config .trivy.yaml --format json --output security-scan-results/trivy-fs.json .
+
+          # Run configuration scan
+          trivy config --format json --output security-scan-results/trivy-config.json .
+
+          # Scan for secrets
+          trivy fs --scanners secret --format json --output security-scan-results/trivy-secrets.json .
+
+      # OWASP Dependency Check with enhanced configuration
+      - name: Run Enhanced OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'urnlabs-ai-platform'
+          path: '.'
+          format: 'ALL'
+          args: >
+            --enableRetired
+            --enableExperimental
+            --failOnCVSS 7
+            --suppression suppression.xml
+            --out security-scan-results/owasp-dependency-check
+
+      # Secret scanning with TruffleHog
+      - name: Run Secret Scanning with TruffleHog
+        run: |
+          echo "🔍 Running secret scanning with TruffleHog..."
+
+          # Install TruffleHog
+          if ! command -v trufflehog &> /dev/null; then
+            curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+          fi
+
+          # Run TruffleHog scan
+          trufflehog git file://. --json > security-scan-results/trufflehog-secrets.json 2>/dev/null || true
+
+          # Count secrets found
+          SECRET_COUNT=$(cat security-scan-results/trufflehog-secrets.json | jq -s 'length' 2>/dev/null || echo "0")
+          echo "🔍 Secrets found: $SECRET_COUNT"
+
+      # CodeQL analysis for SAST
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+      # Process and consolidate scan results
+      - name: Process Security Scan Results
+        id: process-results
+        run: |
+          echo "📊 Processing security scan results..."
+
+          mkdir -p consolidated-results
+
+          # Initialize counters
+          total_vulnerabilities=0
+          critical_count=0
+          high_count=0
+          medium_count=0
+          low_count=0
+          secrets_count=0
+
+          # Process Snyk results
+          if [ -f "security-scan-results/snyk-detailed.json" ]; then
+            echo "📋 Processing Snyk results..."
+            snyk_vulns=$(jq '.vulnerabilities | length' security-scan-results/snyk-detailed.json 2>/dev/null || echo "0")
+            snyk_critical=$(jq '[.vulnerabilities[] | select(.severity == "critical")] | length' security-scan-results/snyk-detailed.json 2>/dev/null || echo "0")
+            snyk_high=$(jq '[.vulnerabilities[] | select(.severity == "high")] | length' security-scan-results/snyk-detailed.json 2>/dev/null || echo "0")
+
+            total_vulnerabilities=$((total_vulnerabilities + snyk_vulns))
+            critical_count=$((critical_count + snyk_critical))
+            high_count=$((high_count + snyk_high))
+
+            echo "Snyk: $snyk_vulns vulnerabilities ($snyk_critical critical, $snyk_high high)"
+          fi
+
+          # Process Trivy results
+          if [ -f "security-scan-results/trivy-fs.json" ]; then
+            echo "📋 Processing Trivy results..."
+            trivy_critical=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' security-scan-results/trivy-fs.json 2>/dev/null || echo "0")
+            trivy_high=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH")] | length' security-scan-results/trivy-fs.json 2>/dev/null || echo "0")
+            trivy_medium=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "MEDIUM")] | length' security-scan-results/trivy-fs.json 2>/dev/null || echo "0")
+
+            critical_count=$((critical_count + trivy_critical))
+            high_count=$((high_count + trivy_high))
+            medium_count=$((medium_count + trivy_medium))
+
+            echo "Trivy: $trivy_critical critical, $trivy_high high, $trivy_medium medium"
+          fi
+
+          # Process secret scan results
+          if [ -f "security-scan-results/trufflehog-secrets.json" ]; then
+            secrets_count=$(cat security-scan-results/trufflehog-secrets.json | jq -s 'length' 2>/dev/null || echo "0")
+            echo "Secrets found: $secrets_count"
+          fi
+
+          # Create consolidated report
+          cat > consolidated-results/security-summary.json << EOF
+          {
+            "scanId": "${{ steps.generate-scan-id.outputs.scan_id }}",
+            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "gitCommit": "${{ github.sha }}",
+            "gitBranch": "${{ github.ref_name }}",
+            "summary": {
+              "totalVulnerabilities": $total_vulnerabilities,
+              "criticalVulnerabilities": $critical_count,
+              "highVulnerabilities": $high_count,
+              "mediumVulnerabilities": $medium_count,
+              "secretsFound": $secrets_count
+            },
+            "tools": {
+              "snyk": {
+                "vulnerabilities": $([ -f "security-scan-results/snyk-detailed.json" ] && jq '.vulnerabilities | length' security-scan-results/snyk-detailed.json 2>/dev/null || echo "0"),
+                "fixableVulnerabilities": $([ -f "security-scan-results/snyk-detailed.json" ] && jq '[.vulnerabilities[] | select(.isUpgradable == true or .isPatchable == true)] | length' security-scan-results/snyk-detailed.json 2>/dev/null || echo "0")
+              },
+              "trivy": {
+                "critical": $trivy_critical,
+                "high": $trivy_high,
+                "medium": $trivy_medium
+              },
+              "secrets": {
+                "count": $secrets_count
+              }
+            }
+          }
+          EOF
+
+          echo "📊 Security scan summary:"
+          echo "Total vulnerabilities: $total_vulnerabilities"
+          echo "Critical vulnerabilities: $critical_count"
+          echo "High vulnerabilities: $high_count"
+          echo "Secrets found: $secrets_count"
+
+          echo "critical_count=$critical_count" >> $GITHUB_OUTPUT
+          echo "high_count=$high_count" >> $GITHUB_OUTPUT
+          echo "total_vulnerabilities=$total_vulnerabilities" >> $GITHUB_OUTPUT
+          echo "secrets_count=$secrets_count" >> $GITHUB_OUTPUT
+
+      # Upload security scan results
+      - name: Upload Security Scan Results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: security-scan-results/
+
+      # Call vulnerability scanning API if available
+      - name: Report to Vulnerability Database
+        if: env.VULNERABILITY_API_URL
+        env:
+          VULNERABILITY_API_URL: ${{ secrets.VULNERABILITY_API_URL }}
+          VULNERABILITY_API_KEY: ${{ secrets.VULNERABILITY_API_KEY }}
+        run: |
+          echo "📡 Reporting scan results to vulnerability database..."
+
+          if [ -f "consolidated-results/security-summary.json" ]; then
+            curl -X POST "$VULNERABILITY_API_URL/api/security-scanning/scans" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $VULNERABILITY_API_KEY" \
+              -d @consolidated-results/security-summary.json \
+              --fail --silent --show-error || echo "Failed to report to vulnerability database"
+          fi
+
+      # Security gate decision
+      - name: Security Gate Evaluation
+        id: security-gate
+        run: |
+          echo "🚪 Evaluating security gate..."
+
+          critical_count="${{ steps.process-results.outputs.critical_count }}"
+          high_count="${{ steps.process-results.outputs.high_count }}"
+          secrets_count="${{ steps.process-results.outputs.secrets_count }}"
+
+          echo "Critical vulnerabilities: $critical_count"
+          echo "High vulnerabilities: $high_count"
+          echo "Secrets found: $secrets_count"
+
+          # Define security gate thresholds
+          MAX_CRITICAL=0
+          MAX_HIGH=5
+          MAX_SECRETS=0
+
+          # Evaluate security gate
+          if [ "$critical_count" -gt "$MAX_CRITICAL" ]; then
+            echo "❌ Security gate FAILED: $critical_count critical vulnerabilities found (max: $MAX_CRITICAL)"
+            echo "passed=false" >> $GITHUB_OUTPUT
+            exit 1
+          elif [ "$secrets_count" -gt "$MAX_SECRETS" ]; then
+            echo "❌ Security gate FAILED: $secrets_count secrets found (max: $MAX_SECRETS)"
+            echo "passed=false" >> $GITHUB_OUTPUT
+            exit 1
+          elif [ "$high_count" -gt "$MAX_HIGH" ]; then
+            echo "⚠️ Security gate PASSED with warnings: $high_count high vulnerabilities found (max: $MAX_HIGH)"
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Security gate PASSED: All security checks passed"
+            echo "passed=true" >> $GITHUB_OUTPUT
+          fi
+
+      # Upload all scan artifacts
+      - name: Upload Security Scan Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-scan-results-${{ steps.generate-scan-id.outputs.scan_id }}
+          path: |
+            security-scan-results/
+            consolidated-results/
+          retention-days: 30
+
+      - name: Upload OWASP results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-report
+          path: reports/
+
+      # CodeQL Analysis for SAST
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+      # Security gate decision
+      - name: Security Gate
+        id: security-gate
+        run: |
+          echo "🔒 Evaluating security scan results..."
+
+          # Check for critical vulnerabilities
+          CRITICAL_VULNS=$(find . -name "*.sarif" -exec grep -l "\"level\":\"error\"" {} \; | wc -l)
+
+          if [ "$CRITICAL_VULNS" -gt 0 ]; then
+            echo "❌ Critical security vulnerabilities found!"
+            echo "passed=false" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✅ Security scans passed!"
+            echo "passed=true" >> $GITHUB_OUTPUT
+          fi
+
+  # Compliance validation
+  compliance-validation:
+    name: Security Compliance Validation
+    runs-on: ubuntu-latest
+    needs: security-scan
+    outputs:
+      compliance-passed: ${{ steps.compliance-gate.outputs.passed }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install compliance validation dependencies
+        run: |
+          # Install license checker and other compliance tools
+          npm install -g license-checker-rseidelsohn yq
+          sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Run Security Compliance Validation
+        run: |
+          chmod +x ./scripts/security-compliance-validator.sh
+          ./scripts/security-compliance-validator.sh
+
+      - name: Upload compliance report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-compliance-report
+          path: reports/security-compliance/
+
+      - name: Compliance Gate
+        id: compliance-gate
+        run: |
+          # The security-compliance-validator.sh script will exit with non-zero if compliance fails
+          # If we reach this point, compliance validation passed
+          echo "✅ Security compliance validation passed!"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+  # Lint and type checking for all services
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api, agents, gateway, bridge, dashboard]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint - ${{ matrix.service }}
+        run: |
+          cd apps/${{ matrix.service }}
+          if [ -f "package.json" ] && grep -q "lint" package.json; then
+            pnpm lint
+          else
+            echo "No lint script found for ${{ matrix.service }}"
+          fi
+
+      - name: Type check - ${{ matrix.service }}
+        run: |
+          cd apps/${{ matrix.service }}
+          if [ -f "package.json" ] && grep -q "typecheck" package.json; then
+            pnpm typecheck
+          else
+            echo "No typecheck script found for ${{ matrix.service }}"
+          fi
+
+  # Security testing with our comprehensive test suite
+  security-testing:
+    name: Security Testing
+    runs-on: ubuntu-latest
+    needs: [security-scan]
+    if: needs.security-scan.outputs.security-passed == 'true'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup test database
+        run: |
+          cd apps/api
+          # Setup test PostgreSQL database
+          docker run -d \
+            --name postgres-test \
+            -e POSTGRES_PASSWORD=test123 \
+            -e POSTGRES_USER=test \
+            -e POSTGRES_DB=urnlabs_test \
+            -p 5433:5432 \
+            postgres:15
+
+          # Wait for database to be ready
+          sleep 10
+
+      - name: Run Security Tests - API
+        run: |
+          cd apps/api
+          export DATABASE_URL="postgresql://test:test123@localhost:5433/urnlabs_test"
+          pnpm run test:security
+        env:
+          NODE_ENV: test
+
+      - name: Upload Security Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-test-results
+          path: apps/api/security-test-results.xml
+
+      - name: Cleanup test database
+        if: always()
+        run: docker rm -f postgres-test
+
+  # Build all services
+  build-services:
+    name: Build Services
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, security-testing]
+    strategy:
+      matrix:
+        service: [api, agents, gateway, bridge, dashboard]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build - ${{ matrix.service }}
+        run: |
+          cd apps/${{ matrix.service }}
+          if [ -f "package.json" ] && grep -q "build" package.json; then
+            pnpm build
+          else
+            echo "No build script found for ${{ matrix.service }}"
+          fi
+
+      - name: Upload build artifacts - ${{ matrix.service }}
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ matrix.service }}-build
+          path: apps/${{ matrix.service }}/dist
+          retention-days: 30
+
+  # Build Docker images for containerized services
+  build-docker-images:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [build-services]
+    strategy:
+      matrix:
+        service: [api, agents, gateway, bridge, dashboard]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Scan Docker images for vulnerabilities
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-image-${{ matrix.service }}.sarif'
+
+      - name: Upload Trivy image scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-image-${{ matrix.service }}.sarif'
+
+  # Enhanced performance testing with baseline comparison and regression detection
+  performance-testing:
+    name: Performance Testing with Baseline Comparison
+    runs-on: ubuntu-latest
+    needs: [build-docker-images]
+    if: github.event_name != 'pull_request'
+    outputs:
+      performance-status: ${{ steps.performance-gate.outputs.status }}
+      regression-detected: ${{ steps.performance-gate.outputs.regression_detected }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js for baseline processing
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup k6 for performance testing
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Download performance baselines
+        uses: actions/download-artifact@v4
+        with:
+          name: performance-baselines-${{ github.ref_name }}-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'staging' }}
+          path: performance/baselines
+        continue-on-error: true
+
+      - name: Start services for performance testing
+        run: |
+          echo "🚀 Starting services for performance testing..."
+          docker-compose -f docker-compose-local.yml up -d
+
+          # Wait for all services to be healthy
+          echo "⏳ Waiting for services to be ready..."
+          sleep 45
+
+          # Verify critical services are healthy
+          services=("7000" "7001" "7002" "7003" "7004")
+          for port in "${services[@]}"; do
+            echo "🩺 Checking service health on port $port..."
+            max_attempts=15
+            attempt=0
+
+            while [[ $attempt -lt $max_attempts ]]; do
+              if curl -f -s "http://localhost:${port}/health" > /dev/null; then
+                echo "✅ Service on port $port is healthy"
+                break
+              else
+                echo "⏳ Waiting for service on port $port... (attempt $((attempt+1))/$max_attempts)"
+                sleep 10
+                attempt=$((attempt+1))
+              fi
+            done
+
+            if [[ $attempt -eq $max_attempts ]]; then
+              echo "❌ Service on port $port failed health check"
+              exit 1
+            fi
+          done
+
+          echo "✅ All services are healthy and ready for testing"
+
+      - name: Run enhanced performance tests with baseline comparison
+        run: |
+          echo "📊 Running performance tests with baseline comparison..."
+
+          # Set environment variables for performance testing
+          export ENVIRONMENT="${{ github.event.inputs.environment || 'staging' }}"
+          export BRANCH="${{ github.ref_name }}"
+          export BASE_URL="http://localhost:7001"
+          export CI_MODE="true"
+          export SLACK_WEBHOOK_URL="${{ secrets.SLACK_WEBHOOK_URL }}"
+          export PERFORMANCE_ALERT_WEBHOOK="${{ secrets.PERFORMANCE_ALERT_WEBHOOK }}"
+
+          # Determine baseline mode based on branch and event type
+          if [[ "${{ github.ref_name }}" == "main" ]] && [[ "${{ github.event_name }}" == "push" ]]; then
+            export BASELINE_MODE="create"
+            export BLOCK_ON_REGRESSION="false"
+            echo "📋 Creating new baseline for main branch"
+          else
+            export BASELINE_MODE="compare"
+            export BLOCK_ON_REGRESSION="true"
+            echo "🔍 Comparing performance against baseline"
+          fi
+
+          # Make script executable and run performance tests
+          chmod +x scripts/run-performance-tests.sh
+          ./scripts/run-performance-tests.sh
+
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment || 'staging' }}
+          BRANCH: ${{ github.ref_name }}
+          BASE_URL: http://localhost:7001
+          CI_MODE: true
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          PERFORMANCE_ALERT_WEBHOOK: ${{ secrets.PERFORMANCE_ALERT_WEBHOOK }}
+
+      - name: Performance Gate Decision
+        id: performance-gate
+        run: |
+          echo "🚪 Evaluating performance gate..."
+
+          # Check if baseline comparison results exist
+          if [[ -f "performance/reports/baseline-comparison-"*".json" ]]; then
+            latest_comparison=$(find performance/reports -name "baseline-comparison-*.json" -type f -printf '%T@ %p\n' | sort -k1,1nr | head -1 | cut -d' ' -f2-)
+
+            echo "📋 Analyzing comparison results: $latest_comparison"
+
+            # Extract key metrics from comparison
+            regressions=$(jq '.summary.regressions | length' "$latest_comparison")
+            critical_alerts=$(jq '[.alerts[]? | select(.level == "critical")] | length' "$latest_comparison" 2>/dev/null || echo "0")
+            warning_alerts=$(jq '[.alerts[]? | select(.level == "warning")] | length' "$latest_comparison" 2>/dev/null || echo "0")
+
+            echo "📊 Performance Gate Results:"
+            echo "   Regressions: $regressions"
+            echo "   Critical Alerts: $critical_alerts"
+            echo "   Warning Alerts: $warning_alerts"
+
+            # Determine gate status
+            if [[ $critical_alerts -gt 0 ]] || [[ $regressions -gt 2 ]]; then
+              echo "❌ Performance gate FAILED"
+              echo "status=failed" >> $GITHUB_OUTPUT
+              echo "regression_detected=true" >> $GITHUB_OUTPUT
+
+              # Set job failure for deployment blocking
+              if [[ "${{ github.ref_name }}" != "main" ]]; then
+                echo "🚫 Blocking deployment due to performance regressions"
+                exit 1
+              else
+                echo "⚠️ Performance issues detected on main branch - creating baseline anyway"
+              fi
+            elif [[ $warning_alerts -gt 0 ]] || [[ $regressions -gt 0 ]]; then
+              echo "⚠️ Performance gate PASSED with warnings"
+              echo "status=warning" >> $GITHUB_OUTPUT
+              echo "regression_detected=false" >> $GITHUB_OUTPUT
+            else
+              echo "✅ Performance gate PASSED"
+              echo "status=passed" >> $GITHUB_OUTPUT
+              echo "regression_detected=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "ℹ️ No baseline comparison available - creating baseline"
+            echo "status=baseline_created" >> $GITHUB_OUTPUT
+            echo "regression_detected=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload performance artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-results-${{ github.ref_name }}-${{ github.run_number }}
+          path: |
+            performance/reports/
+            performance/baselines/
+          retention-days: 30
+
+      - name: Upload performance baselines for future comparisons
+        uses: actions/upload-artifact@v4
+        if: github.ref_name == 'main' && github.event_name == 'push'
+        with:
+          name: performance-baselines-${{ github.ref_name }}-staging
+          path: performance/baselines/
+          retention-days: 90
+
+      - name: Generate performance dashboard
+        run: |
+          echo "📊 Generating performance dashboard..."
+
+          # Create public dashboard if results exist
+          if [[ -f "performance/reports/dashboard-"*".html" ]]; then
+            mkdir -p public/performance
+            cp performance/reports/dashboard-*.html public/performance/
+            cp performance/reports/dashboard-*.json public/performance/
+
+            echo "📊 Performance dashboard available at: public/performance/"
+          fi
+
+      - name: Comment performance results on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Find latest comparison file
+            const reportsDir = 'performance/reports';
+            if (!fs.existsSync(reportsDir)) return;
+
+            const comparisonFiles = fs.readdirSync(reportsDir)
+              .filter(f => f.startsWith('baseline-comparison-'))
+              .sort()
+              .reverse();
+
+            if (comparisonFiles.length === 0) return;
+
+            const comparisonFile = path.join(reportsDir, comparisonFiles[0]);
+            const comparison = JSON.parse(fs.readFileSync(comparisonFile, 'utf8'));
+
+            const status = comparison.summary.passed ? '✅ PASSED' : '❌ FAILED';
+            const regressions = comparison.summary.regressions.length;
+            const improvements = comparison.summary.improvements.length;
+
+            let comment = `## 📊 Performance Test Results\n\n`;
+            comment += `**Status:** ${status}\n`;
+            comment += `**Regressions:** ${regressions}\n`;
+            comment += `**Improvements:** ${improvements}\n\n`;
+
+            if (regressions > 0) {
+              comment += `### ⚠️ Performance Regressions\n\n`;
+              comparison.summary.regressions.forEach(reg => {
+                comment += `- **${reg.metric}:** ${reg.change_percent}% slower (${reg.current} vs ${reg.baseline})\n`;
+              });
+              comment += `\n`;
+            }
+
+            if (improvements > 0) {
+              comment += `### 🚀 Performance Improvements\n\n`;
+              comparison.summary.improvements.forEach(imp => {
+                comment += `- **${imp.metric}:** ${imp.change_percent}% faster\n`;
+              });
+            }
+
+            comment += `\n_Performance test completed at ${new Date().toISOString()}_`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Cleanup services
+        if: always()
+        run: |
+          echo "🧹 Cleaning up services..."
+          docker-compose -f docker-compose-local.yml down || true
+          docker system prune -f || true
+
+  # Deploy to development environment
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: [build-docker-images, performance-testing, validate-migrations]
+    if: (github.ref == 'refs/heads/develop' || github.event.inputs.environment == 'dev') && needs.performance-testing.outputs.performance-status != 'failed'
+    environment: development
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Development
+        run: |
+          echo "🚀 Deploying to Development environment..."
+          echo "📦 Services: API, Agents, Gateway, Bridge, Dashboard"
+          # Add actual deployment commands here
+
+      - name: Run smoke tests
+        run: |
+          echo "🧪 Running smoke tests..."
+          # Add smoke test commands here
+
+  # Deploy to staging environment
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-docker-images, performance-testing, validate-migrations]
+    if: (github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging') && needs.performance-testing.outputs.performance-status != 'failed'
+    environment: staging
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Staging
+        run: |
+          echo "🚀 Deploying to Staging environment..."
+          echo "📦 Services: API, Agents, Gateway, Bridge, Dashboard"
+          # Add actual deployment commands here
+
+      - name: Staging Deployment Validation
+        run: |
+          echo "🧪 Running comprehensive staging deployment validation..."
+
+          # Make deployment validator script executable
+          chmod +x scripts/deployment-validator.sh
+
+          # Run deployment validation for staging
+          ./scripts/deployment-validator.sh \
+            --environment staging \
+            --services api,agents,gateway,bridge,dashboard \
+            --type blue-green \
+            --timeout 300
+
+      - name: Upload Staging Validation Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployment-validation-report-staging
+          path: reports/deployment-validation/
+
+  # Deploy to production environment (requires manual approval)
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.ref == 'refs/heads/main' && github.event.inputs.environment == 'production'
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Swarm for Blue-Green Deployment
+        run: |
+          echo "🐳 Setting up Docker Swarm for Blue-Green deployment..."
+
+          # Install required tools
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+
+          # Setup k6 for performance testing
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+          # Initialize Docker Swarm if not already done
+          if ! docker node ls &>/dev/null; then
+            docker swarm init
+          fi
+
+          # Setup infrastructure
+          chmod +x scripts/setup-swarm.sh
+          ./scripts/setup-swarm.sh production
+
+      - name: Pre-deployment Migration Validation
+        run: |
+          echo "🔍 Running pre-deployment migration validation..."
+
+          # Set up database environment for validation
+          export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+          export NODE_ENV="production"
+
+          # Make migration validation script executable
+          chmod +x scripts/validate-migration.sh
+
+          # Run comprehensive migration validation
+          if ./scripts/validate-migration.sh production "" full false; then
+            echo "✅ Migration validation passed - proceeding with deployment"
+          else
+            echo "❌ Migration validation failed - aborting deployment"
+            echo "🔄 Consider running migration rollback if needed"
+            exit 1
+          fi
+
+      - name: Blue-Green Deployment to Production
+        run: |
+          echo "🚀 Starting Blue-Green deployment to Production..."
+          echo "📦 Services: API, Agents, Gateway, Bridge, Dashboard"
+
+          # Set environment variables for deployment
+          export GITHUB_REPOSITORY="${{ github.repository }}"
+          export IMAGE_TAG="${{ github.sha }}"
+          export ENVIRONMENT="production"
+
+          # Determine services to deploy
+          if [[ "${{ github.event.inputs.deploy_services }}" == "all" ]] || [[ -z "${{ github.event.inputs.deploy_services }}" ]]; then
+            export SERVICES="all"
+          else
+            export SERVICES="${{ github.event.inputs.deploy_services }}"
+          fi
+
+          echo "🎯 Deploying services: $SERVICES"
+          echo "🏷️ Image tag: $IMAGE_TAG"
+
+          # Execute blue-green deployment with rollback triggers
+          chmod +x scripts/blue-green-deploy.sh
+          chmod +x scripts/execute-migration-rollback.sh
+
+          # Set rollback trigger for migration failures
+          trap 'echo "❌ Deployment failed - checking if migration rollback is needed"; ./scripts/execute-migration-rollback.sh production "" false true' ERR
+
+          ./scripts/blue-green-deploy.sh production "$SERVICES" 300 true
+
+      - name: Comprehensive Deployment Validation
+        run: |
+          echo "🔍 Running comprehensive deployment validation suite..."
+
+          # Make deployment validator script executable
+          chmod +x scripts/deployment-validator.sh
+
+          # Set environment variables for production validation
+          export ENVIRONMENT="production"
+          export SERVICES="api,agents,gateway,bridge,dashboard"
+          export DEPLOYMENT_TYPE="blue-green"
+
+          # Run comprehensive deployment validation
+          ./scripts/deployment-validator.sh \
+            --environment production \
+            --services api,agents,gateway,bridge,dashboard \
+            --type blue-green \
+            --timeout 600
+
+      - name: Upload Deployment Validation Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployment-validation-report-production
+          path: reports/deployment-validation/
+
+      - name: Setup Deployment Monitoring
+        run: |
+          echo "📊 Setting up deployment monitoring..."
+
+          # Copy monitoring configuration
+          if [ -f "monitoring/deployment-monitoring.yml" ]; then
+            echo "✅ Deployment monitoring configuration found"
+          else
+            echo "⚠️ Deployment monitoring configuration not found"
+          fi
+
+          # Verify Grafana dashboard exists
+          if [ -f "monitoring/dashboards/deployment-dashboard.json" ]; then
+            echo "✅ Deployment dashboard configuration found"
+          else
+            echo "⚠️ Deployment dashboard configuration not found"
+          fi
+
+      - name: Production Smoke Tests
+        run: |
+          echo "🧪 Running comprehensive production smoke tests..."
+
+          # Use our comprehensive smoke test script
+          chmod +x scripts/run-smoke-tests.sh
+          ./scripts/run-smoke-tests.sh production "http://localhost" 180 true
+
+          echo "✅ Production smoke tests completed successfully!"
+
+      - name: Performance Validation
+        run: |
+          echo "📊 Running performance validation against baseline..."
+
+          # Create performance validation script
+          cat > performance-validation.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+          import { Rate, Trend } from 'k6/metrics';
+
+          export const options = {
+            stages: [
+              { duration: '1m', target: 20 },  // Ramp up to 20 users
+              { duration: '3m', target: 20 },  // Stay at 20 users for 3 minutes
+              { duration: '1m', target: 0 },   // Ramp down
+            ],
+            thresholds: {
+              http_req_duration: ['p(95)<800'],   // 95th percentile under 800ms
+              http_req_failed: ['rate<0.01'],     // Error rate under 1%
+              'api_response_time': ['p(95)<500'], // API responses under 500ms
+            },
+          };
+
+          const apiResponseTime = new Trend('api_response_time');
+          const errorRate = new Rate('errors');
+
+          export default function () {
+            // Test main API endpoint
+            const apiResponse = http.get('http://localhost:7001/health');
+            apiResponseTime.add(apiResponse.timings.duration);
+            errorRate.add(apiResponse.status !== 200);
+
+            check(apiResponse, {
+              'API response status is 200': (r) => r.status === 200,
+              'API response time acceptable': (r) => r.timings.duration < 500,
+            });
+
+            // Test gateway endpoint
+            const gatewayResponse = http.get('http://localhost:7000/health');
+            check(gatewayResponse, {
+              'Gateway response status is 200': (r) => r.status === 200,
+              'Gateway response time acceptable': (r) => r.timings.duration < 200,
+            });
+
+            sleep(1);
+          }
+          EOF
+
+          # Run performance validation
+          k6 run --quiet performance-validation.js || {
+            echo "❌ Performance validation failed!"
+            echo "🔄 Consider rolling back deployment if performance degradation is significant"
+            exit 1
+          }
+
+          echo "✅ Performance validation passed!"
+
+      - name: Traffic Switching Confirmation
+        run: |
+          echo "🔄 Confirming traffic switch completion..."
+
+          # Verify all services are receiving traffic on the new deployment
+          services=("api" "agents" "gateway" "bridge" "dashboard")
+
+          for service in "${services[@]}"; do
+            echo "🔍 Verifying traffic routing for $service..."
+
+            # Check Docker service status
+            new_replicas=$(docker service ls --format "table {{.Name}}\t{{.Replicas}}" | grep "${service}-production-" | grep -v "0/0" | wc -l)
+
+            if [[ $new_replicas -gt 0 ]]; then
+              echo "✅ $service is actively serving traffic"
+            else
+              echo "❌ $service may not be receiving traffic"
+              exit 1
+            fi
+          done
+
+          echo "✅ All services confirmed to be receiving traffic"
+          echo "🎉 Blue-Green deployment completed successfully!"
+          echo ""
+          echo "📊 Deployment Summary:"
+          echo "======================"
+          echo "🌍 Environment: production"
+          echo "🏷️ Image Tag: ${{ github.sha }}"
+          echo "📦 Services Deployed: ${{ github.event.inputs.deploy_services || 'all' }}"
+          echo "⏰ Completed at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+  # Database migration validation
+  validate-migrations:
+    name: Validate Database Migrations
+    runs-on: ubuntu-latest
+    needs: [security-scan]
+    if: needs.security-scan.outputs.security-passed == 'true'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup test database for migration validation
+        run: |
+          # Setup primary test database
+          docker run -d \
+            --name postgres-migration \
+            -e POSTGRES_PASSWORD=test123 \
+            -e POSTGRES_USER=test \
+            -e POSTGRES_DB=urnlabs_migration_test \
+            -p 5434:5432 \
+            postgres:15
+
+          # Setup isolation test database
+          docker run -d \
+            --name postgres-isolation \
+            -e POSTGRES_PASSWORD=test123 \
+            -e POSTGRES_USER=test \
+            -e POSTGRES_DB=urnlabs_isolation_test \
+            -p 5435:5432 \
+            postgres:15
+
+          # Wait for databases to be ready
+          sleep 15
+
+          # Verify database connections
+          docker exec postgres-migration pg_isready -U test
+          docker exec postgres-isolation pg_isready -U test
+
+      - name: Run comprehensive migration validation
+        run: |
+          export DATABASE_URL="postgresql://test:test123@localhost:5434/urnlabs_migration_test"
+          export NODE_ENV=test
+
+          # Make validation script executable
+          chmod +x scripts/validate-migration.sh
+
+          # Run full migration validation with all checks
+          echo "🔍 Running comprehensive migration validation..."
+          ./scripts/validate-migration.sh development "" full false
+
+          # Check if validation report was generated
+          if [ -f migration-validation-report-*.json ]; then
+            echo "📊 Migration validation report generated successfully"
+            cat migration-validation-report-*.json | jq '.'
+          fi
+        env:
+          NODE_ENV: test
+
+      - name: Test migration deployment and rollback
+        run: |
+          cd apps/api
+          export DATABASE_URL="postgresql://test:test123@localhost:5434/urnlabs_migration_test"
+
+          echo "🚀 Testing migration deployment..."
+
+          # Deploy migrations
+          pnpm prisma migrate deploy
+
+          # Run database seeding to ensure data integrity
+          if [ -f prisma/seed.ts ]; then
+            pnpm prisma db seed
+          fi
+
+          # Verify migration deployment
+          pnpm prisma migrate status
+
+          echo "✅ Migration deployment test completed"
+
+        env:
+          NODE_ENV: test
+
+      - name: Test migration rollback procedures
+        run: |
+          cd apps/api
+          export DATABASE_URL="postgresql://test:test123@localhost:5435/urnlabs_isolation_test"
+
+          echo "🔄 Testing migration rollback procedures..."
+
+          # Create a test scenario with data
+          pnpm prisma migrate deploy
+          if [ -f prisma/seed.ts ]; then
+            pnpm prisma db seed
+          fi
+
+          # Test rollback validation using our custom validator
+          node -e "
+            const { PrismaClient } = require('@prisma/client');
+            const { createMigrationValidator } = require('./src/lib/migration-validator.js');
+
+            const prisma = new PrismaClient();
+            const validator = createMigrationValidator(prisma);
+
+            async function testRollback() {
+              try {
+                console.log('🧪 Testing rollback plan generation...');
+
+                // Get latest migration
+                const migrations = await prisma.\\$queryRaw\`
+                  SELECT migration_name
+                  FROM _prisma_migrations
+                  ORDER BY finished_at DESC
+                  LIMIT 1
+                \`;
+
+                if (migrations.length > 0) {
+                  const latestMigration = migrations[0].migration_name;
+                  console.log(\`📋 Testing rollback for migration: \${latestMigration}\`);
+
+                  const rollbackPlan = await validator.createRollbackPlan(latestMigration);
+
+                  if (rollbackPlan.isRollbackSafe) {
+                    console.log('✅ Rollback plan generated successfully');
+                    console.log(\`📝 Rollback steps: \${rollbackPlan.rollbackSteps.length}\`);
+                  } else {
+                    console.log('⚠️ Rollback marked as unsafe - manual intervention required');
+                    console.log(\`❌ Issues: \${rollbackPlan.unsafeReasons.join(', ')}\`);
+                  }
+                } else {
+                  console.log('ℹ️ No migrations found to test rollback');
+                }
+
+                console.log('✅ Rollback procedure test completed');
+              } catch (error) {
+                console.error('❌ Rollback test failed:', error.message);
+                process.exit(1);
+              } finally {
+                await prisma.\\$disconnect();
+              }
+            }
+
+            testRollback();
+          "
+
+          echo "✅ Migration rollback test completed"
+
+        env:
+          NODE_ENV: test
+
+      - name: Performance impact assessment
+        run: |
+          export DATABASE_URL="postgresql://test:test123@localhost:5434/urnlabs_migration_test"
+          export NODE_ENV=test
+
+          echo "📊 Assessing migration performance impact..."
+
+          # Run performance assessment using our validation script
+          cd apps/api
+          node -e "
+            const { PrismaClient } = require('@prisma/client');
+
+            const prisma = new PrismaClient();
+
+            async function assessPerformance() {
+              try {
+                console.log('📈 Analyzing database performance metrics...');
+
+                // Get table sizes
+                const tableSizes = await prisma.\\$queryRaw\`
+                  SELECT
+                    schemaname,
+                    tablename,
+                    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size,
+                    pg_total_relation_size(schemaname||'.'||tablename) as bytes
+                  FROM pg_tables
+                  WHERE schemaname = 'public'
+                  ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+                  LIMIT 5
+                \`;
+
+                console.log('📊 Top 5 largest tables:');
+                tableSizes.forEach(table => {
+                  console.log(\`   \${table.tablename}: \${table.size}\`);
+                });
+
+                // Check active connections
+                const connections = await prisma.\\$queryRaw\`
+                  SELECT COUNT(*) as active_connections
+                  FROM pg_stat_activity
+                  WHERE state = 'active'
+                \`;
+
+                console.log(\`🔗 Active connections: \${connections[0].active_connections}\`);
+
+                console.log('✅ Performance assessment completed');
+              } catch (error) {
+                console.error('❌ Performance assessment failed:', error.message);
+                process.exit(1);
+              } finally {
+                await prisma.\\$disconnect();
+              }
+            }
+
+            assessPerformance();
+          "
+
+        env:
+          NODE_ENV: test
+
+      - name: Upload migration validation artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: migration-validation-results
+          path: |
+            migration-validation-report-*.json
+            apps/api/prisma/backups/
+          retention-days: 30
+
+      - name: Cleanup migration databases
+        if: always()
+        run: |
+          docker rm -f postgres-migration || true
+          docker rm -f postgres-isolation || true
+
+  # Notification and reporting
+  notify-completion:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [deploy-dev, deploy-staging, deploy-production]
+    if: always()
+
+    steps:
+      - name: Notify success
+        if: ${{ success() }}
+        run: |
+          echo "✅ Pipeline completed successfully!"
+          echo "🌐 All services deployed and healthy"
+
+      - name: Notify failure
+        if: ${{ failure() }}
+        run: |
+          echo "❌ Pipeline failed!"
+          echo "🔍 Check logs for details"

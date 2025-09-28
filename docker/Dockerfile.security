@@ -1,0 +1,62 @@
+FROM node:18-alpine
+
+# Security: Create non-root user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
+
+# Security: Update packages and remove package manager cache
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
+    curl \
+    dumb-init && \
+    rm -rf /var/cache/apk/*
+
+# Security: Set secure directory permissions
+WORKDIR /app
+RUN chown -R nextjs:nodejs /app
+
+# Copy package files
+COPY package*.json ./
+COPY packages/testing/package.json ./packages/testing/
+
+# Install dependencies with security audit
+RUN npm ci --only=production && \
+    npm audit --audit-level=moderate && \
+    npm cache clean --force
+
+# Copy application code
+COPY --chown=nextjs:nodejs . .
+
+# Security: Build application
+USER nextjs
+RUN npm run build:packages
+
+# Security: Remove development dependencies and source code
+USER root
+RUN rm -rf packages/testing/src && \
+    rm -rf .git && \
+    rm -rf node_modules && \
+    npm ci --only=production && \
+    npm cache clean --force
+
+# Security: Switch back to non-root user
+USER nextjs
+
+# Security: Use dumb-init as PID 1
+ENTRYPOINT ["dumb-init", "--"]
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Security: Expose only necessary port
+EXPOSE 8080
+
+# Security: Run with non-root user
+CMD ["node", "packages/testing/dist/server.js"]
+
+# Security labels
+LABEL security.scan="trivy" \
+      security.non-root="true" \
+      security.readonly-rootfs="false" \
+      security.no-new-privileges="true"

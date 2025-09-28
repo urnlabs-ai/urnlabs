@@ -1,0 +1,27 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import Faq from '~/components/Faq.tsx';
+---
+
+<BaseLayout
+  title="Urnlabs - Frequently Asked Questions"
+  description="Build deterministic AI agent workflows with governance-first approach. Transform your operations with measurable ROI."
+>
+  <main class="min-h-screen">
+    <section class="py-24 sm:py-32">
+      <div class="mx-auto max-w-7xl px-6 lg:px-8">
+        <div class="mx-auto max-w-2xl text-center">
+          <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">
+            Frequently Asked Questions
+          </h2>
+          <p class="mt-6 text-lg leading-8 text-gray-300">
+            Here are some of our most frequently asked questions.
+          </p>
+        </div>
+        <div class="mt-16">
+          <Faq client:load />
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

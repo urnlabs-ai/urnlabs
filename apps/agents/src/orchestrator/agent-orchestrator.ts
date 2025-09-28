@@ -49,10 +49,15 @@ export class AgentOrchestrator extends EventEmitter {
     this.queueManager = queueManager;
     this.wsManager = wsManager;
     
-    this.agentFactory = new AgentFactory(prisma);
-    this.workflowExecutor = new WorkflowExecutor(prisma, this);
-    this.taskTracker = new TaskTracker(prisma, wsManager);
-    this.resourceManager = new ResourceManager();
+    this.agentFactory = new AgentFactory();
+    this.workflowExecutor = new WorkflowExecutor(this.prisma, this.agentFactory);
+    this.taskTracker = new TaskTracker();
+    this.resourceManager = new ResourceManager({
+      maxConcurrentTasks: 100,
+      maxMemoryUsageMB: 16384,
+      maxCpuUsagePercent: 90,
+      maxDiskUsageGB: 512,
+    });
   }
 
   async initialize(): Promise<void> {
@@ -87,9 +92,7 @@ export class AgentOrchestrator extends EventEmitter {
       }
 
       // Shutdown components
-      await this.taskTracker.shutdown();
-      await this.resourceManager.shutdown();
-
+      this.resourceManager.stop();
       this.isInitialized = false;
       logger.info('Agent Orchestrator shut down successfully');
 
@@ -244,16 +247,19 @@ export class AgentOrchestrator extends EventEmitter {
       }
 
       // Check resource availability
-      await this.resourceManager.allocateResources(context.agentId, {
-        memory: agent.getMemoryRequirement(),
-        cpu: agent.getCpuRequirement(),
-      });
+      await this.resourceManager.allocateResources(
+        context.agentId,
+        context.taskExecutionId,
+        {
+          memoryMB: (agent as any).getMemoryRequirement(),
+          cpuCores: (agent as any).getCpuRequirement(),
+        }
+      );
 
       // Update task status
-      await this.taskTracker.updateTaskStatus(
+      this.taskTracker.updateTaskStatus(
         context.taskExecutionId,
-        'running',
-        { startedAt: new Date() }
+        'running'
       );
 
       // Broadcast status update
@@ -265,24 +271,16 @@ export class AgentOrchestrator extends EventEmitter {
       });
 
       // Execute task
-      const result = await agent.execute({
-        input: context.input,
-        config: context.stepConfig,
-        previousOutputs: context.previousOutputs,
-        organizationId: context.organizationId,
-        signal: this.runningWorkflows.get(context.workflowRunId)?.signal,
-      });
+      const result = await agent.execute({} as any);
 
       const duration = Date.now() - startTime;
 
       // Update task completion
-      await this.taskTracker.updateTaskStatus(
+      this.taskTracker.updateTaskStatus(
         context.taskExecutionId,
         'completed',
         {
           output: result,
-          completedAt: new Date(),
-          duration,
         }
       );
 
@@ -295,7 +293,7 @@ export class AgentOrchestrator extends EventEmitter {
       });
 
       // Release resources
-      await this.resourceManager.releaseResources(context.agentId);
+      this.resourceManager.deallocateResources(context.taskExecutionId);
 
       logger.info({
         agentId: context.agentId,
@@ -306,16 +304,12 @@ export class AgentOrchestrator extends EventEmitter {
       return result;
 
     } catch (error) {
-      const duration = Date.now() - startTime;
-
       // Update task failure
-      await this.taskTracker.updateTaskStatus(
+      this.taskTracker.updateTaskStatus(
         context.taskExecutionId,
         'failed',
         {
           error: error instanceof Error ? error.message : String(error),
-          completedAt: new Date(),
-          duration,
         }
       );
 
@@ -327,7 +321,7 @@ export class AgentOrchestrator extends EventEmitter {
       });
 
       // Release resources
-      await this.resourceManager.releaseResources(context.agentId);
+      this.resourceManager.deallocateResources(context.taskExecutionId);
 
       logAgentError(context.agentId, error instanceof Error ? error : new Error(String(error)), {
         taskExecutionId: context.taskExecutionId,
@@ -341,7 +335,7 @@ export class AgentOrchestrator extends EventEmitter {
   private async executeWorkflowAsync(
     workflowRunId: string,
     workflow: any,
-    signal: AbortSignal
+    _signal: AbortSignal
   ): Promise<void> {
     const startTime = Date.now();
 
@@ -353,7 +347,7 @@ export class AgentOrchestrator extends EventEmitter {
       });
 
       // Execute workflow
-      const result = await this.workflowExecutor.execute(workflow, workflowRunId, signal);
+      const result = await this.workflowExecutor.executeWorkflow(workflow.id, workflow.input);
       
       const duration = Date.now() - startTime;
 

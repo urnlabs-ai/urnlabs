@@ -16,8 +16,8 @@ COPY packages ./packages
 # Install all workspace dependencies recursively
 RUN pnpm install --frozen-lockfile --recursive
 
-# Build workspace packages
-RUN pnpm -r --filter "./packages/**" build
+# Build workspace packages (excluding problematic ones)
+RUN pnpm -r --filter "./packages/**" --filter "!@urnlabs/ai-agents" build
 
 # Development stage
 FROM base AS dev

@@ -1,0 +1,125 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: urnlabs-platform-config
+  namespace: urnlabs-platform
+  labels:
+    app.kubernetes.io/name: urnlabs-ai-platform
+    app.kubernetes.io/component: config
+data:
+  # API Configuration
+  API_PORT: "7001"
+  API_HOST: "0.0.0.0"
+  
+  # Agent Service Configuration
+  AGENTS_PORT: "7002"
+  AGENTS_HOST: "0.0.0.0"
+  
+  # Gateway Configuration
+  GATEWAY_PORT: "7000"
+  GATEWAY_HOST: "0.0.0.0"
+  
+  # Bridge Service Configuration
+  BRIDGE_PORT: "7003"
+  BRIDGE_HOST: "0.0.0.0"
+  
+  # Dashboard Configuration
+  DASHBOARD_PORT: "7004"
+  DASHBOARD_HOST: "0.0.0.0"
+  
+  # Monitoring Configuration
+  MONITORING_PORT: "7006"
+  MONITORING_MCP_PORT: "7016"
+  WEBSOCKET_PORT: "8080"
+  
+  # Database Configuration
+  DATABASE_HOST: "postgres-service"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "urnlabs_production"
+  
+  # Redis Configuration
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  
+  # Prometheus Configuration
+  PROMETHEUS_URL: "http://prometheus-service.urnlabs-monitoring.svc.cluster.local:9090"
+  
+  # Grafana Configuration
+  GRAFANA_URL: "http://grafana-service.urnlabs-monitoring.svc.cluster.local:3000"
+  
+  # Security Configuration
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_MAX: "1000"
+  RATE_LIMIT_WINDOW: "900000"
+  CORS_ENABLED: "true"
+  MFA_REQUIRED: "true"
+  
+  # SSL/TLS Configuration
+  HTTPS_ENABLED: "true"
+  SSL_REDIRECT: "true"
+  
+  # Performance Configuration
+  APM_ENABLED: "true"
+  PERFORMANCE_MONITORING: "true"
+  ERROR_TRACKING: "true"
+  
+  # Health Check Configuration
+  HEALTH_CHECK_INTERVAL: "30000"
+  
+  # Node Environment
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: urnlabs-staging-config
+  namespace: urnlabs-staging
+  labels:
+    app.kubernetes.io/name: urnlabs-ai-platform
+    app.kubernetes.io/component: config
+    app.kubernetes.io/environment: staging
+data:
+  # API Configuration
+  API_PORT: "7001"
+  API_HOST: "0.0.0.0"
+  
+  # Agent Service Configuration
+  AGENTS_PORT: "7002"
+  AGENTS_HOST: "0.0.0.0"
+  
+  # Gateway Configuration
+  GATEWAY_PORT: "7000"
+  GATEWAY_HOST: "0.0.0.0"
+  
+  # Bridge Service Configuration
+  BRIDGE_PORT: "7003"
+  BRIDGE_HOST: "0.0.0.0"
+  
+  # Dashboard Configuration
+  DASHBOARD_PORT: "7004"
+  DASHBOARD_HOST: "0.0.0.0"
+  
+  # Database Configuration
+  DATABASE_HOST: "postgres-staging-service"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "urnlabs_staging"
+  
+  # Redis Configuration
+  REDIS_HOST: "redis-staging-service"
+  REDIS_PORT: "6379"
+  
+  # Security Configuration (Staging)
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_MAX: "100"
+  RATE_LIMIT_WINDOW: "900000"
+  CORS_ENABLED: "true"
+  MFA_REQUIRED: "false"
+  MOCK_EXTERNAL_SERVICES: "false"
+  ENABLE_DEBUG_ENDPOINTS: "true"
+  BYPASS_AUTH_FOR_TESTING: "false"
+  
+  # Node Environment
+  NODE_ENV: "staging"
+  LOG_LEVEL: "debug"

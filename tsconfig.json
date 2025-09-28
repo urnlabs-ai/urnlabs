@@ -1,0 +1,51 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@urnlabs/*": ["./packages/*/src"],
+      "@urnlabs/config": ["./packages/config/src"],
+      "@urnlabs/ui": ["./packages/ui/src"],
+      "@urnlabs/ai-agents": ["./packages/ai-agents/src"],
+      "@urnlabs/mcp-integration": ["./packages/mcp-integration/src"],
+      "@urnlabs/monitoring": ["./packages/monitoring/src"],
+      "@urnlabs/security": ["./packages/security/src"],
+      "@urnlabs/testing": ["./packages/testing/src"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".astro",
+    "build"
+  ],
+  "ts-node": {
+    "esm": true
+  }
+}

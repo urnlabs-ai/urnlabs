@@ -1,0 +1,66 @@
+  # Enhanced Analytics & Reporting Engine
+  analytics:
+    build:
+      context: .
+      dockerfile: apps/analytics/Dockerfile
+      target: dev
+    container_name: urnlabs-analytics-local
+    ports:
+      - "7011:7011"  # Analytics API service
+      - "8082:8082"  # WebSocket server for real-time dashboard
+    environment:
+      - NODE_ENV=development
+      - HOST=0.0.0.0
+      - PORT=7011
+      - WEBSOCKET_PORT=8082
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/urnlabs_dev
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - CLICKHOUSE_USER=clickhouse
+      - CLICKHOUSE_PASSWORD=clickhouse
+      - CLICKHOUSE_DATABASE=analytics
+      - KAFKA_BROKERS=kafka:9092
+      - JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
+      - LOG_LEVEL=info
+      - GATEWAY_URL=http://gateway:7000
+      - API_ENDPOINT=http://api:7001
+      - AGENTS_ENDPOINT=http://agents:7002
+      # Email configuration for reports
+      - SMTP_HOST=localhost
+      - SMTP_PORT=587
+      - SMTP_SECURE=false
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - EMAIL_FROM=reports@urnlabs.ai
+      # Report storage
+      - REPORTS_PATH=/app/reports
+      - TIMEZONE=UTC
+      # Analytics configuration
+      - AVERAGE_HOURLY_RATE_CENTS=5000
+      - SENIOR_HOURLY_RATE_CENTS=8000
+      - JUNIOR_HOURLY_RATE_CENTS=3000
+      - SERVER_COST_PER_HOUR_CENTS=10
+      - AI_API_COST_MULTIPLIER=1.2
+      - DISCOUNT_RATE=0.1
+      - TAX_RATE=0.25
+    depends_on:
+      - postgres
+      - redis
+      - clickhouse
+      - kafka
+      - zookeeper
+      - api
+      - agents
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - shared_data:/shared
+      - analytics_reports:/app/reports
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7011/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network

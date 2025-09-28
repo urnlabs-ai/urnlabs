@@ -1,0 +1,295 @@
+# Deployment Monitoring Configuration
+# Comprehensive monitoring setup for deployment validation and real-time tracking
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'urnlabs-platform'
+    environment: '{{ .Environment }}'
+
+# Deployment-specific monitoring rules
+rule_files:
+  - "deployment_rules.yml"
+  - "performance_rules.yml"
+  - "availability_rules.yml"
+
+# Scrape configurations for deployment monitoring
+scrape_configs:
+  # Application health monitoring
+  - job_name: 'urnlabs-services'
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets:
+          - 'api:7001'
+          - 'agents:7002'
+          - 'gateway:7000'
+          - 'bridge:7003'
+          - 'dashboard:7004'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 'prometheus-exporter:9090'
+
+  # Deployment validation monitoring
+  - job_name: 'deployment-validation'
+    scrape_interval: 30s
+    metrics_path: '/deployment/metrics'
+    static_configs:
+      - targets:
+          - 'deployment-monitor:8080'
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'deployment_.*'
+        target_label: job
+        replacement: 'deployment-validation'
+
+  # Container monitoring for deployment
+  - job_name: 'container-deployment'
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - 'cadvisor:8080'
+    relabel_configs:
+      - source_labels: [container_label_com_docker_compose_service]
+        target_label: service
+      - source_labels: [container_label_com_docker_compose_project]
+        target_label: project
+
+  # Database monitoring during deployment
+  - job_name: 'postgres-deployment'
+    scrape_interval: 30s
+    static_configs:
+      - targets:
+          - 'postgres-exporter:9187'
+
+  # Redis monitoring during deployment
+  - job_name: 'redis-deployment'
+    scrape_interval: 30s
+    static_configs:
+      - targets:
+          - 'redis-exporter:9121'
+
+  # Load balancer monitoring
+  - job_name: 'nginx-deployment'
+    scrape_interval: 30s
+    static_configs:
+      - targets:
+          - 'nginx-exporter:9113'
+
+# Alertmanager configuration for deployment alerts
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - 'alertmanager:9093'
+
+# Remote write for deployment metrics (optional)
+remote_write:
+  - url: 'https://metrics.urnlabs.com/api/v1/receive'
+    basic_auth:
+      username: '{{ .MetricsUsername }}'
+      password: '{{ .MetricsPassword }}'
+    write_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'deployment_.*'
+        action: keep
+
+---
+# Deployment-specific alerting rules
+# File: deployment_rules.yml
+
+groups:
+  - name: deployment.rules
+    rules:
+      # Deployment validation alerts
+      - alert: DeploymentValidationFailed
+        expr: deployment_validation_success == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: deployment
+        annotations:
+          summary: "Deployment validation failed for {{ $labels.environment }}"
+          description: "Deployment validation has failed for environment {{ $labels.environment }}. Check validation logs immediately."
+
+      - alert: DeploymentHealthCheckFailed
+        expr: deployment_health_check_success == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: deployment
+        annotations:
+          summary: "Deployment health check failed"
+          description: "Health check failed for service {{ $labels.service }} in environment {{ $labels.environment }}"
+
+      - alert: DeploymentPerformanceDegraded
+        expr: deployment_response_time_seconds > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          component: deployment
+        annotations:
+          summary: "Deployment performance degraded"
+          description: "Response time for {{ $labels.service }} is {{ $value }}s, exceeding 2s threshold"
+
+      # Service availability during deployment
+      - alert: ServiceUnavailableDuringDeployment
+        expr: up{job="urnlabs-services"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          component: deployment
+        annotations:
+          summary: "Service unavailable during deployment"
+          description: "Service {{ $labels.instance }} is down during deployment in {{ $labels.environment }}"
+
+      - alert: DeploymentRollbackTriggered
+        expr: deployment_rollback_triggered == 1
+        for: 0s
+        labels:
+          severity: critical
+          component: deployment
+        annotations:
+          summary: "Deployment rollback triggered"
+          description: "Automatic rollback triggered for deployment in {{ $labels.environment }} due to validation failures"
+
+      # Database connectivity during deployment
+      - alert: DatabaseConnectionFailedDuringDeployment
+        expr: postgres_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: deployment
+        annotations:
+          summary: "Database connection failed during deployment"
+          description: "PostgreSQL connection failed during deployment in {{ $labels.environment }}"
+
+      # Memory and CPU alerts during deployment
+      - alert: HighMemoryUsageDuringDeployment
+        expr: container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.9
+        for: 2m
+        labels:
+          severity: warning
+          component: deployment
+        annotations:
+          summary: "High memory usage during deployment"
+          description: "Container {{ $labels.name }} memory usage is {{ $value | humanizePercentage }} of limit"
+
+      - alert: HighCPUUsageDuringDeployment
+        expr: rate(container_cpu_usage_seconds_total[5m]) > 0.8
+        for: 3m
+        labels:
+          severity: warning
+          component: deployment
+        annotations:
+          summary: "High CPU usage during deployment"
+          description: "Container {{ $labels.name }} CPU usage is {{ $value | humanizePercentage }}"
+
+---
+# Performance monitoring rules
+# File: performance_rules.yml
+
+groups:
+  - name: performance.rules
+    rules:
+      # Response time tracking
+      - record: deployment:response_time_seconds:rate5m
+        expr: rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m])
+
+      - record: deployment:request_rate:rate5m
+        expr: rate(http_requests_total[5m])
+
+      - record: deployment:error_rate:rate5m
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m])
+
+      # SLA tracking
+      - record: deployment:sla_availability:rate5m
+        expr: 1 - (rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]))
+
+      - alert: SLAViolationDuringDeployment
+        expr: deployment:sla_availability:rate5m < 0.95
+        for: 2m
+        labels:
+          severity: critical
+          component: deployment
+        annotations:
+          summary: "SLA violation during deployment"
+          description: "Service availability is {{ $value | humanizePercentage }} for {{ $labels.service }}, below 95% SLA"
+
+      - alert: ResponseTimeThresholdExceeded
+        expr: deployment:response_time_seconds:rate5m > 1.0
+        for: 3m
+        labels:
+          severity: warning
+          component: deployment
+        annotations:
+          summary: "Response time threshold exceeded"
+          description: "Average response time is {{ $value }}s for {{ $labels.service }}, exceeding 1s threshold"
+
+      - alert: HighErrorRateDuringDeployment
+        expr: deployment:error_rate:rate5m > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          component: deployment
+        annotations:
+          summary: "High error rate during deployment"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.service }}, exceeding 5% threshold"
+
+---
+# Availability monitoring rules
+# File: availability_rules.yml
+
+groups:
+  - name: availability.rules
+    rules:
+      # Service uptime tracking
+      - record: deployment:uptime:rate5m
+        expr: avg_over_time(up[5m])
+
+      - record: deployment:service_count
+        expr: count by (environment, job) (up == 1)
+
+      - record: deployment:total_services
+        expr: count by (environment, job) (up)
+
+      - record: deployment:availability_percentage
+        expr: (deployment:service_count / deployment:total_services) * 100
+
+      # Cross-service dependency monitoring
+      - alert: ServiceDependencyFailure
+        expr: deployment:availability_percentage < 100
+        for: 1m
+        labels:
+          severity: warning
+          component: deployment
+        annotations:
+          summary: "Service dependency failure"
+          description: "{{ $value }}% of services are available in {{ $labels.environment }}, indicating dependency issues"
+
+      # Load balancer health
+      - alert: LoadBalancerFailure
+        expr: nginx_up == 0
+        for: 30s
+        labels:
+          severity: critical
+          component: deployment
+        annotations:
+          summary: "Load balancer failure"
+          description: "Nginx load balancer is down in {{ $labels.environment }}"
+
+      # Gateway health monitoring
+      - alert: GatewayHealthDegraded
+        expr: rate(gateway_requests_total{status=~"5.."}[5m]) / rate(gateway_requests_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          component: deployment
+        annotations:
+          summary: "Gateway health degraded"
+          description: "Gateway error rate is {{ $value | humanizePercentage }} in {{ $labels.environment }}"

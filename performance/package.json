@@ -1,0 +1,67 @@
+{
+  "name": "@urnlabs/performance-testing",
+  "version": "1.0.0",
+  "description": "Performance testing system with baseline comparison and regression detection",
+  "type": "module",
+  "main": "baseline-manager.js",
+  "scripts": {
+    "test": "k6 run k6-baseline-comparison.js",
+    "test:smoke": "ENVIRONMENT=staging k6 run --scenario smoke_test k6-baseline-comparison.js",
+    "test:load": "ENVIRONMENT=staging k6 run --scenario load_test k6-baseline-comparison.js",
+    "test:stress": "ENVIRONMENT=staging k6 run --scenario stress_test k6-baseline-comparison.js",
+    "baseline:create": "BASELINE_MODE=create k6 run k6-baseline-comparison.js",
+    "baseline:compare": "BASELINE_MODE=compare k6 run k6-baseline-comparison.js",
+    "monitor": "node -e \"import('./performance-monitor.js').then(m => new m.default().processResults(JSON.parse(process.argv[1]), 'staging', 'main'))\"",
+    "dashboard": "node -e \"import('./performance-monitor.js').then(m => { const monitor = new m.default(); const data = monitor.generateDashboardData('staging', 'main'); console.log(JSON.stringify(data, null, 2)); })\"",
+    "cleanup": "node -e \"import('./baseline-manager.js').then(m => new m.BaselineManager().cleanOldBaselines(10))\"",
+    "run-all": "../scripts/run-performance-tests.sh"
+  },
+  "keywords": [
+    "performance",
+    "testing",
+    "k6",
+    "baseline",
+    "regression",
+    "monitoring",
+    "ci-cd",
+    "devops"
+  ],
+  "author": "Urnlabs Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "exports": {
+    ".": {
+      "import": "./baseline-manager.js"
+    },
+    "./baseline-manager": {
+      "import": "./baseline-manager.js"
+    },
+    "./performance-monitor": {
+      "import": "./performance-monitor.js"
+    }
+  },
+  "files": [
+    "baseline-manager.js",
+    "performance-monitor.js",
+    "k6-baseline-comparison.js",
+    "k6-config.js",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/urnlabs/urnlabs-ai.git",
+    "directory": "performance"
+  },
+  "bugs": {
+    "url": "https://github.com/urnlabs/urnlabs-ai/issues"
+  },
+  "homepage": "https://github.com/urnlabs/urnlabs-ai#readme"
+}

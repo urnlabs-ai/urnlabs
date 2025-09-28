@@ -146,25 +146,16 @@ ehthumbs.db
 # Include important ignore patterns specific to docker context
 .git/
 .gitignore
-README.md
 Dockerfile*
 docker-compose*
 .dockerignore
 
-# Large directories that should be excluded
-apps/
-packages/
-apps/**
-packages/**
-!apps/gateway
-!apps/api
-!apps/dashboard
-!apps/agents
-!apps/bridge
-!packages/ai-agents
-!packages/database
-!packages/auth
-!packages/monitoring
-!packages/mcp-integration
-!packages/testing  
-!packages/security
+# Additional excludes to keep context lean
+**/.git/
+**/coverage/
+**/.cache/
+**/*.test.ts
+**/*.spec.ts
+**/__tests__/
+**/*.md
+**/README*

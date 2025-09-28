@@ -8,7 +8,6 @@ class RedisManager {
 
   constructor() {
     this.client = new Redis(config.redis.url, {
-      retryDelayOnFailover: 100,
       enableReadyCheck: true,
       maxRetriesPerRequest: 3,
       lazyConnect: true,

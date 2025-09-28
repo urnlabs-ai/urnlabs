@@ -1,0 +1,84 @@
+services:
+  # === ASTRO WEBSITES ===
+  urnlabs:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.astro.apps
+      args:
+        - SITE_DIR=apps/urnlabs
+    ports:
+      - "8002:4321"
+    environment:
+      - NODE_ENV=development
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4321 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - urnlabs-network
+
+  usmanramzan:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.astro.apps
+      args:
+        - SITE_DIR=apps/usmanramzan
+    ports:
+      - "8001:4321"
+    environment:
+      - NODE_ENV=development
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4321 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - urnlabs-network
+
+  usmanramzan-ai:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.astro.apps
+      args:
+        - SITE_DIR=apps/usmanramzan-ai
+    ports:
+      - "8003:4321"
+    environment:
+      - NODE_ENV=development
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4321 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - urnlabs-network
+
+  # === REVERSE PROXY ===
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx-websites.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - urnlabs
+      - usmanramzan
+      - usmanramzan-ai
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - urnlabs-network
+
+networks:
+  urnlabs-network:
+    driver: bridge
+
+volumes:
+  urnlabs_data: {}

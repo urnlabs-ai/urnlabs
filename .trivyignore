@@ -1,0 +1,33 @@
+# Trivy ignore file
+# This file contains vulnerabilities and security issues to ignore during Trivy scans
+
+# Ignore low severity vulnerabilities in development dependencies
+# Format: CVE-YYYY-NNNN
+
+# Example: Ignore specific CVE in development tools
+# CVE-2023-12345
+
+# Ignore vulnerabilities in test files
+# These are typically not included in production builds
+**/test/**
+**/tests/**
+**/__tests__/**
+**/*.test.js
+**/*.test.ts
+**/*.spec.js
+**/*.spec.ts
+
+# Ignore vulnerabilities in configuration files that are not deployed
+**/.eslintrc.*
+**/jest.config.*
+**/vitest.config.*
+**/tsconfig.json
+**/.prettierrc.*
+
+# Ignore vulnerabilities in documentation files
+**/README.md
+**/CHANGELOG.md
+**/*.md
+
+# Ignore known false positives (add specific CVEs as needed)
+# CVE-2023-XXXXX  # Example: False positive in development dependency

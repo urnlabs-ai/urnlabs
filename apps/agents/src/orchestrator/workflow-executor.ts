@@ -167,7 +167,7 @@ export class WorkflowExecutor extends EventEmitter {
 
           } else {
             stepExecution.status = 'failed';
-            stepExecution.error = result.error;
+            stepExecution.error = result.error as any;
             stepExecution.completedAt = new Date();
 
             this.emit('step:failed', {

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://www.owasp.org/dependency-check/xml/suppressions">
+    <!--
+    This file contains suppression rules for OWASP Dependency Check
+    Use this to suppress false positives or known acceptable risks
+    -->
+
+    <!-- Example suppression for a specific CVE in development dependencies -->
+    <!--
+    <suppress>
+        <notes><![CDATA[
+        This vulnerability is in a development dependency and does not affect production
+        ]]></notes>
+        <cve>CVE-2023-XXXXX</cve>
+        <packageUrl regex="true">^pkg:npm/.*@.*$</packageUrl>
+    </suppress>
+    -->
+
+    <!-- Suppress low-severity vulnerabilities in test dependencies -->
+    <suppress until="2024-12-31Z">
+        <notes><![CDATA[
+        Test dependencies with low CVSS scores - not exploitable in production
+        ]]></notes>
+        <cvssBelow>4.0</cvssBelow>
+        <packageUrl regex="true">^pkg:npm/(jest|vitest|@types/).*@.*$</packageUrl>
+    </suppress>
+
+    <!-- Suppress prototype pollution in development tools -->
+    <suppress until="2024-12-31Z">
+        <notes><![CDATA[
+        Prototype pollution in development tools - not accessible in production environment
+        ]]></notes>
+        <cwe>1321</cwe>
+        <packageUrl regex="true">^pkg:npm/(webpack|vite|rollup).*@.*$</packageUrl>
+    </suppress>
+
+</suppressions>

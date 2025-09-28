@@ -1,0 +1,230 @@
+version: '3.8'
+
+services:
+  # Development PostgreSQL Database
+  postgres-dev:
+    image: postgres:15
+    container_name: urnlabs-postgres-dev
+    environment:
+      POSTGRES_DB: urnlabs_dev
+      POSTGRES_USER: dev_user
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./apps/api/prisma/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - urnlabs-platform-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev_user -d urnlabs_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Development Redis Cache
+  redis-dev:
+    image: redis:7-alpine
+    container_name: urnlabs-redis-dev
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - urnlabs-platform-dev
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Service - Development
+  api-dev:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: development
+    container_name: urnlabs-api-dev
+    env_file:
+      - .github/environments/dev.env
+    environment:
+      DATABASE_URL: postgresql://dev_user:dev_password@postgres-dev:5432/urnlabs_dev
+      REDIS_URL: redis://redis-dev:6379
+    ports:
+      - "7101:7001"  # Different port to avoid conflicts
+    volumes:
+      - ./apps/api:/app
+      - /app/node_modules
+      - /app/dist
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+      redis-dev:
+        condition: service_healthy
+    networks:
+      - urnlabs-platform-dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Agents Service - Development
+  agents-dev:
+    build:
+      context: .
+      dockerfile: apps/agents/Dockerfile
+      target: development
+    container_name: urnlabs-agents-dev
+    env_file:
+      - .github/environments/dev.env
+    ports:
+      - "7102:7002"  # Different port to avoid conflicts
+    volumes:
+      - ./apps/agents:/app
+      - /app/node_modules
+      - /app/dist
+    depends_on:
+      api-dev:
+        condition: service_healthy
+    networks:
+      - urnlabs-platform-dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Gateway Service - Development
+  gateway-dev:
+    build:
+      context: .
+      dockerfile: apps/gateway/Dockerfile
+      target: development
+    container_name: urnlabs-gateway-dev
+    env_file:
+      - .github/environments/dev.env
+    ports:
+      - "7100:7000"  # Different port to avoid conflicts
+    volumes:
+      - ./apps/gateway:/app
+      - /app/node_modules
+      - /app/dist
+    depends_on:
+      api-dev:
+        condition: service_healthy
+      agents-dev:
+        condition: service_healthy
+    networks:
+      - urnlabs-platform-dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Bridge Service - Development
+  bridge-dev:
+    build:
+      context: .
+      dockerfile: apps/bridge/Dockerfile
+      target: development
+    container_name: urnlabs-bridge-dev
+    env_file:
+      - .github/environments/dev.env
+    ports:
+      - "7103:7003"  # Different port to avoid conflicts
+    volumes:
+      - ./apps/bridge:/app
+      - /app/node_modules
+      - /app/dist
+    depends_on:
+      gateway-dev:
+        condition: service_healthy
+    networks:
+      - urnlabs-platform-dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Dashboard Service - Development
+  dashboard-dev:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+      target: development
+    container_name: urnlabs-dashboard-dev
+    env_file:
+      - .github/environments/dev.env
+    ports:
+      - "7104:7004"  # Different port to avoid conflicts
+    volumes:
+      - ./apps/dashboard:/app
+      - /app/node_modules
+      - /app/dist
+    depends_on:
+      gateway-dev:
+        condition: service_healthy
+    networks:
+      - urnlabs-platform-dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Prometheus - Development Monitoring
+  prometheus-dev:
+    image: prom/prometheus:latest
+    container_name: urnlabs-prometheus-dev
+    ports:
+      - "9091:9090"  # Different port to avoid conflicts
+    volumes:
+      - ./monitoring/prometheus.dev.yml:/etc/prometheus/prometheus.yml
+      - prometheus_dev_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - urnlabs-platform-dev
+    restart: unless-stopped
+
+  # Grafana - Development Monitoring
+  grafana-dev:
+    image: grafana/grafana:latest
+    container_name: urnlabs-grafana-dev
+    ports:
+      - "3001:3000"  # Different port to avoid conflicts
+    volumes:
+      - grafana_dev_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: dev_admin_password
+      GF_USERS_ALLOW_SIGN_UP: false
+    depends_on:
+      - prometheus-dev
+    networks:
+      - urnlabs-platform-dev
+    restart: unless-stopped
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+  prometheus_dev_data:
+  grafana_dev_data:
+
+networks:
+  urnlabs-platform-dev:
+    driver: bridge
+    name: urnlabs-platform-dev-network

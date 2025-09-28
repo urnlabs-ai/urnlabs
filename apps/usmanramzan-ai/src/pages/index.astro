@@ -5,12 +5,14 @@ import PersonalHero from '../components/PersonalHero.tsx';
 import ProjectsSection from '../components/ProjectsSection.astro';
 import SkillsSection from '../components/SkillsSection.astro';
 import ContactSection from '../components/ContactSection.astro';
+import { AnimationController } from '../components/AnimationController.tsx';
 ---
 
 <BaseLayout>
-  <Header />
-  
-  <main>
+  <AnimationController client:load>
+    <Header />
+
+    <main>
     <!-- Hero Section -->
     <PersonalHero client:load />
 
@@ -229,9 +231,9 @@ import ContactSection from '../components/ContactSection.astro';
 
     <!-- Contact Section -->
     <ContactSection />
-  </main>
-  
-  <!-- Footer -->
+    </main>
+
+    <!-- Footer -->
   <footer class="bg-slate-900 dark:bg-slate-950 text-white py-12">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
       <div class="text-center">
@@ -267,4 +269,5 @@ import ContactSection from '../components/ContactSection.astro';
       </div>
     </div>
   </footer>
+  </AnimationController>
 </BaseLayout>

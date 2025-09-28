@@ -1,6 +1,5 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { z } from 'zod';
-import { testConnection, databaseHealth } from '@/lib/database.js';
+import { databaseHealth } from '@/lib/database.js';
 import { config } from '@/lib/config.js';
 import Redis from 'ioredis';
 
@@ -70,8 +69,7 @@ export async function healthRoutes(
       summary: 'Detailed health check',
       description: 'Returns comprehensive application health status including dependencies',
     },
-  }, async (request, reply) => {
-    const startTime = Date.now();
+  }, async (_request, reply) => {
     const health: HealthStatus = {
       status: 'healthy',
       timestamp: new Date().toISOString(),

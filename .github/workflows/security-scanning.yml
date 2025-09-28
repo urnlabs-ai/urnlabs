@@ -1,0 +1,380 @@
+name: Security Vulnerability Scanning Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Type of scan to run'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+        - full
+        - containers
+        - dependencies
+        - web
+      severity_threshold:
+        description: 'Minimum severity to fail build'
+        required: false
+        default: 'HIGH'
+        type: choice
+        options:
+        - CRITICAL
+        - HIGH
+        - MEDIUM
+        - LOW
+
+env:
+  DOCKER_BUILDKIT: 1
+  TRIVY_VERSION: 0.47.0
+  ZAP_VERSION: 2.14.0
+
+jobs:
+  # Container Security Scanning with Trivy
+  container-security:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    if: github.event.inputs.scan_type == 'full' || github.event.inputs.scan_type == 'containers' || github.event_name != 'workflow_dispatch'
+
+    strategy:
+      matrix:
+        service: [api, agents, gateway, bridge, security, dashboard]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          cd apps/${{ matrix.service }}
+          docker build -t urnlabs/${{ matrix.service }}:security-scan .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'urnlabs/${{ matrix.service }}:security-scan'
+          format: 'sarif'
+          output: 'trivy-${{ matrix.service }}.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '1'
+          ignore-unfixed: true
+
+      - name: Run Trivy config scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: './apps/${{ matrix.service }}'
+          format: 'sarif'
+          output: 'trivy-config-${{ matrix.service }}.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-${{ matrix.service }}.sarif'
+
+      - name: Upload Trivy config scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-config-${{ matrix.service }}.sarif'
+
+      - name: Generate detailed report
+        if: always()
+        run: |
+          docker run --rm -v "$PWD:/workspace" \
+            aquasec/trivy:${{ env.TRIVY_VERSION }} \
+            image --format json --output /workspace/trivy-${{ matrix.service }}.json \
+            urnlabs/${{ matrix.service }}:security-scan
+
+      - name: Upload vulnerability reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-reports-${{ matrix.service }}
+          path: |
+            trivy-${{ matrix.service }}.json
+            trivy-${{ matrix.service }}.sarif
+            trivy-config-${{ matrix.service }}.sarif
+
+  # Dependency Security Scanning with Snyk
+  dependency-security:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+    if: github.event.inputs.scan_type == 'full' || github.event.inputs.scan_type == 'dependencies' || github.event_name != 'workflow_dispatch'
+
+    strategy:
+      matrix:
+        service: [api, agents, gateway, bridge, security, dashboard, urnlabs]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'apps/${{ matrix.service }}/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd apps/${{ matrix.service }}
+          npm ci
+
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=${{ github.event.inputs.severity_threshold || 'high' }}
+          command: test
+          json: true
+
+      - name: Run Snyk to check for license issues
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: --severity-threshold=medium --license
+
+      - name: Upload result to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: snyk.sarif
+
+  # Web Application Security Testing with OWASP ZAP
+  web-security:
+    name: Web Application Security Scan
+    runs-on: ubuntu-latest
+    if: github.event.inputs.scan_type == 'full' || github.event.inputs.scan_type == 'web' || github.event_name != 'workflow_dispatch'
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: urnlabs_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Start application services
+        run: |
+          # Install dependencies
+          npm install
+
+          # Start gateway and API services for testing
+          cd apps/gateway && npm install && npm run build &
+          cd apps/api && npm install && npm run build &
+
+          # Wait for services to start
+          sleep 30
+
+          # Verify services are running
+          curl -f http://localhost:7000/health || exit 1
+
+      - name: Run ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.10.0
+        with:
+          target: 'http://localhost:7000'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
+
+      - name: Run ZAP Full Scan
+        uses: zaproxy/action-full-scan@v0.8.0
+        if: github.event_name == 'schedule' || github.event.inputs.scan_type == 'full'
+        with:
+          target: 'http://localhost:7000'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
+
+      - name: Upload ZAP scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-reports
+          path: |
+            report_html.html
+            report_json.json
+            report_md.md
+
+  # Aggregate and process results
+  security-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [container-security, dependency-security, web-security]
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install security service dependencies
+        run: |
+          cd packages/security
+          npm install
+
+      - name: Process security scan results
+        run: |
+          node packages/security/src/cli/process-scan-results.js \
+            --trivy-dir ./trivy-reports-* \
+            --snyk-file ./snyk.sarif \
+            --zap-dir ./zap-reports \
+            --output ./security-report.json \
+            --format json
+
+      - name: Generate security dashboard
+        run: |
+          node packages/security/src/cli/generate-dashboard.js \
+            --input ./security-report.json \
+            --output ./security-dashboard.html
+
+      - name: Check security thresholds
+        run: |
+          node packages/security/src/cli/check-thresholds.js \
+            --input ./security-report.json \
+            --critical-max 0 \
+            --high-max 5 \
+            --medium-max 20
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: |
+            security-report.json
+            security-dashboard.html
+
+      - name: Update security metrics
+        if: github.ref == 'refs/heads/main'
+        run: |
+          # Update security metrics in monitoring system
+          curl -X POST "${{ secrets.MONITORING_WEBHOOK }}" \
+            -H "Content-Type: application/json" \
+            -d @security-report.json
+
+      - name: Comment PR with security summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('security-report.json', 'utf8'));
+
+            const summary = `## Security Scan Results
+
+            | Scanner | Critical | High | Medium | Low |
+            |---------|----------|------|---------|-----|
+            | Trivy   | ${report.trivy.critical} | ${report.trivy.high} | ${report.trivy.medium} | ${report.trivy.low} |
+            | Snyk    | ${report.snyk.critical} | ${report.snyk.high} | ${report.snyk.medium} | ${report.snyk.low} |
+            | ZAP     | ${report.zap.critical} | ${report.zap.high} | ${report.zap.medium} | ${report.zap.low} |
+
+            **Risk Score:** ${report.riskScore}/100
+            **Compliance Status:** ${report.complianceStatus}
+
+            ${report.criticalIssues.length > 0 ? '⚠️ **Critical vulnerabilities found!**' : '✅ No critical vulnerabilities found'}
+
+            [View detailed report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+  # Automated remediation for low-risk issues
+  auto-remediation:
+    name: Automated Remediation
+    runs-on: ubuntu-latest
+    needs: [security-report]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'schedule'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download security report
+        uses: actions/download-artifact@v4
+        with:
+          name: security-report
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Run automated remediation
+        run: |
+          cd packages/security
+          npm install
+          node src/cli/auto-remediate.js \
+            --input ../../security-report.json \
+            --auto-fix-severity LOW,MEDIUM \
+            --create-pr
+
+      - name: Create remediation PR
+        if: success()
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'fix: automated security vulnerability remediation'
+          title: 'Automated Security Fixes'
+          body: |
+            ## Automated Security Remediation
+
+            This PR contains automated fixes for security vulnerabilities:
+
+            - Updated dependencies to patch known vulnerabilities
+            - Applied security configuration improvements
+            - Fixed low and medium severity issues
+
+            **Please review before merging.**
+          branch: security/auto-remediation
+          delete-branch: true

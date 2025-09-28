@@ -4,14 +4,14 @@ import { config } from '@/lib/config.js';
 import { logger } from '@/lib/logger.js';
 
 const server = Fastify({
-  logger: logger,
+  logger: logger as any,
 });
 
 const prisma = new PrismaClient();
 server.decorate('prisma', prisma);
 
 // Basic health check
-server.get('/health', async (request, reply) => {
+server.get('/health', async (_request, reply) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     return reply.send({
@@ -27,7 +27,7 @@ server.get('/health', async (request, reply) => {
 });
 
 // Simple API endpoint
-server.get('/api/test', async (request, reply) => {
+server.get('/api/test', async (_request, reply) => {
   return reply.send({
     message: 'Urnlabs AI Agent Platform API is working!',
     timestamp: new Date().toISOString(),

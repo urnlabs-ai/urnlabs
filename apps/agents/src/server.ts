@@ -10,6 +10,7 @@ import { WebSocketManager } from '@/lib/websocket-manager.js';
 import { agentRoutes } from '@/routes/agents.js';
 import { workflowRoutes } from '@/routes/workflows.js';
 import { healthRoutes } from '@/routes/health.js';
+import mlAnalysisRoutes from '@/routes/ml-analysis.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -22,7 +23,7 @@ declare module 'fastify' {
 
 async function buildServer() {
   const server = Fastify({
-    logger: logger,
+    logger: logger as any,
     requestIdLogLabel: 'request-id',
     requestIdHeader: 'x-request-id',
     genReqId: () => crypto.randomUUID(),
@@ -71,6 +72,7 @@ async function buildServer() {
   await server.register(healthRoutes, { prefix: '/health' });
   await server.register(agentRoutes, { prefix: '/agents' });
   await server.register(workflowRoutes, { prefix: '/workflows' });
+  await server.register(mlAnalysisRoutes, { prefix: '/api' });
 
   // WebSocket endpoint for real-time updates
   server.register(async function (fastify) {

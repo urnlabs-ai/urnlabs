@@ -1,0 +1,1124 @@
+import { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
+import { PolicySimulationService } from '@/services/policy-simulation-service.js';
+import { authMiddleware } from '@/middleware/auth.js';
+
+// ============================================================================
+// POLICY TEMPLATE MANAGEMENT API ROUTES
+// ============================================================================
+
+/**
+ * API routes for policy template management, simulation, and deployment
+ */
+
+// Request/Response schemas
+const PolicyTemplateSchema = z.object({
+  id: z.string().cuid(),
+  name: z.string(),
+  description: z.string().optional(),
+  category: z.enum(['access_control', 'data_protection', 'security', 'compliance', 'audit']),
+  isBuiltIn: z.boolean(),
+  version: z.string(),
+  metadata: z.record(z.any()).optional(),
+  rules: z.record(z.any()),
+  configuration: z.record(z.any()).optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+const CreateTemplateSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().optional(),
+  category: z.enum(['access_control', 'data_protection', 'security', 'compliance', 'audit']),
+  version: z.string().default('1.0.0'),
+  metadata: z.record(z.any()).optional(),
+  rules: z.record(z.any()),
+  configuration: z.record(z.any()).optional(),
+  organizationId: z.string().cuid(),
+});
+
+const UpdateTemplateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().optional(),
+  category: z.enum(['access_control', 'data_protection', 'security', 'compliance', 'audit']).optional(),
+  version: z.string().optional(),
+  metadata: z.record(z.any()).optional(),
+  rules: z.record(z.any()).optional(),
+  configuration: z.record(z.any()).optional(),
+});
+
+const ListTemplatesQuerySchema = z.object({
+  organizationId: z.string().cuid().optional(),
+  category: z.enum(['access_control', 'data_protection', 'security', 'compliance', 'audit']).optional(),
+  isBuiltIn: z.coerce.boolean().optional(),
+  search: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+const CreateSimulationSchema = z.object({
+  templateId: z.string().cuid(),
+  organizationId: z.string().cuid(),
+  name: z.string().min(1).max(100),
+  description: z.string().optional(),
+  dataSourceType: z.enum(['historical_replay', 'synthetic_load', 'edge_cases', 'compliance_test']),
+  configuration: z.record(z.any()).optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+});
+
+const CreateDeploymentSchema = z.object({
+  templateId: z.string().cuid(),
+  organizationId: z.string().cuid(),
+  environment: z.enum(['development', 'staging', 'production']).default('development'),
+  configuration: z.record(z.any()),
+  deploymentNotes: z.string().optional(),
+  scheduledAt: z.coerce.date().optional(),
+});
+
+const policyTemplatesRoutes: FastifyPluginAsync = async (fastify) => {
+  const simulationService = new PolicySimulationService(fastify.prisma);
+
+  // Apply authentication middleware
+  fastify.addHook('preHandler', authMiddleware);
+
+  // ============================================================================
+  // TEMPLATE MANAGEMENT ENDPOINTS
+  // ============================================================================
+
+  /**
+   * GET /policy-templates - List policy templates
+   */
+  fastify.get(
+    '/',
+    {
+      schema: {
+        querystring: {
+          type: 'object',
+          properties: {
+            organizationId: { type: 'string' },
+            category: { type: 'string', enum: ['access_control', 'data_protection', 'security', 'compliance', 'audit'] },
+            isBuiltIn: { type: 'boolean' },
+            search: { type: 'string' },
+            limit: { type: 'number', minimum: 1, maximum: 100, default: 50 },
+            offset: { type: 'number', minimum: 0, default: 0 }
+          },
+          additionalProperties: false
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              templates: { type: 'array' },
+              pagination: {
+                type: 'object',
+                properties: {
+                  total: { type: 'number' },
+                  limit: { type: 'number' },
+                  offset: { type: 'number' },
+                  hasMore: { type: 'boolean' }
+                },
+                additionalProperties: false
+              },
+              query: {
+                type: 'object',
+                properties: {},
+                additionalProperties: false
+              }
+            },
+            additionalProperties: false
+          }
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { organizationId, category, isBuiltIn, search, limit, offset } = request.query;
+
+        // Build where clause
+        const where: any = {};
+
+        if (organizationId || !isBuiltIn) {
+          where.OR = [
+            { isBuiltIn: true }, // Always include built-in templates
+            ...(organizationId ? [{ organizationId }] : [])
+          ];
+        }
+
+        if (category) {
+          where.category = category;
+        }
+
+        if (isBuiltIn !== undefined) {
+          where.isBuiltIn = isBuiltIn;
+        }
+
+        if (search) {
+          where.OR = [
+            ...(where.OR || []),
+            { name: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ];
+        }
+
+        // Get total count and templates
+        const [total, templates] = await Promise.all([
+          fastify.prisma.policyTemplate.count({ where }),
+          fastify.prisma.policyTemplate.findMany({
+            where,
+            orderBy: [
+              { isBuiltIn: 'desc' }, // Built-in templates first
+              { createdAt: 'desc' },
+            ],
+            skip: offset,
+            take: limit,
+            include: {
+              organization: {
+                select: { id: true, name: true },
+              },
+              _count: {
+                select: {
+                  simulations: true,
+                  deployments: true,
+                },
+              },
+            },
+          }),
+        ]);
+
+        reply.send({
+          templates,
+          pagination: {
+            total,
+            limit,
+            offset,
+            hasMore: offset + limit < total,
+          },
+          query: request.query,
+        });
+      } catch (error) {
+        fastify.log.error('Failed to list policy templates', { error, query: request.query });
+        reply.status(500).send({
+          error: 'Failed to list policy templates',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /policy-templates/built-in - Get built-in templates catalog
+   */
+  fastify.get(
+    '/built-in',
+    {
+      schema: {
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              templates: { type: 'array' },
+              categories: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    count: { type: 'number' },
+                    description: { type: 'string' }
+                  },
+                  additionalProperties: false
+                }
+              }
+            },
+            additionalProperties: false
+          }
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const templates = await fastify.prisma.policyTemplate.findMany({
+          where: { isBuiltIn: true },
+          orderBy: [
+            { category: 'asc' },
+            { name: 'asc' },
+          ],
+          include: {
+            _count: {
+              select: {
+                simulations: true,
+                deployments: true,
+              },
+            },
+          },
+        });
+
+        // Group templates by category for summary
+        const categoryMap = new Map<string, number>();
+        templates.forEach(template => {
+          categoryMap.set(template.category, (categoryMap.get(template.category) || 0) + 1);
+        });
+
+        const categories = Array.from(categoryMap.entries()).map(([name, count]) => ({
+          name,
+          count,
+          description: getCategoryDescription(name),
+        }));
+
+        reply.send({
+          templates,
+          categories,
+        });
+      } catch (error) {
+        fastify.log.error('Failed to get built-in templates', { error });
+        reply.status(500).send({
+          error: 'Failed to get built-in templates',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /policy-templates/:id - Get specific template
+   */
+  fastify.get(
+    '/:id',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' }
+          },
+          required: ['id'],
+          additionalProperties: false
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              description: { type: 'string' },
+              category: { type: 'string' },
+              isBuiltIn: { type: 'boolean' },
+              version: { type: 'string' },
+              metadata: { type: 'object' },
+              rules: { type: 'object' },
+              configuration: { type: 'object' },
+              createdAt: { type: 'string' },
+              updatedAt: { type: 'string' },
+              simulations: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    name: { type: 'string' },
+                    status: { type: 'string' },
+                    createdAt: { type: 'string' }
+                  },
+                  additionalProperties: false
+                }
+              },
+              deployments: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    environment: { type: 'string' },
+                    status: { type: 'string' },
+                    deployedAt: { type: 'string' }
+                  },
+                  additionalProperties: false
+                }
+              }
+            },
+            additionalProperties: false
+          }
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+
+        const template = await fastify.prisma.policyTemplate.findUnique({
+          where: { id },
+          include: {
+            organization: {
+              select: { id: true, name: true },
+            },
+            simulations: {
+              select: {
+                id: true,
+                name: true,
+                status: true,
+                createdAt: true,
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 10,
+            },
+            deployments: {
+              select: {
+                id: true,
+                environment: true,
+                status: true,
+                deployedAt: true,
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 10,
+            },
+          },
+        });
+
+        if (!template) {
+          return reply.status(404).send({
+            error: 'Template not found',
+            message: `Policy template with ID ${id} not found`,
+          });
+        }
+
+        reply.send(template);
+      } catch (error) {
+        fastify.log.error('Failed to get policy template', { error, templateId: request.params.id });
+        reply.status(500).send({
+          error: 'Failed to get policy template',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /policy-templates - Create new template
+   */
+  fastify.post(
+    '/',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', minLength: 1, maxLength: 100 },
+            description: { type: 'string' },
+            category: { type: 'string', enum: ['access_control', 'data_protection', 'security', 'compliance', 'audit'] },
+            version: { type: 'string' },
+            metadata: { type: 'object' },
+            rules: { type: 'object' },
+            configuration: { type: 'object' },
+            organizationId: { type: 'string' }
+          },
+          required: ['name', 'category', 'rules', 'organizationId'],
+          additionalProperties: false
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              description: { type: 'string' },
+              category: { type: 'string' },
+              isBuiltIn: { type: 'boolean' },
+              version: { type: 'string' },
+              metadata: { type: 'object' },
+              rules: { type: 'object' },
+              configuration: { type: 'object' },
+              createdAt: { type: 'string' },
+              updatedAt: { type: 'string' }
+            },
+            additionalProperties: false
+          }
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const templateData = request.body;
+
+        // Check if organization exists
+        const organization = await fastify.prisma.organization.findUnique({
+          where: { id: templateData.organizationId },
+        });
+
+        if (!organization) {
+          return reply.status(400).send({
+            error: 'Invalid organization',
+            message: `Organization with ID ${templateData.organizationId} not found`,
+          });
+        }
+
+        // Check for duplicate template names within organization
+        const existingTemplate = await fastify.prisma.policyTemplate.findFirst({
+          where: {
+            name: templateData.name,
+            organizationId: templateData.organizationId,
+          },
+        });
+
+        if (existingTemplate) {
+          return reply.status(409).send({
+            error: 'Template name already exists',
+            message: `A template with name '${templateData.name}' already exists in this organization`,
+          });
+        }
+
+        const template = await fastify.prisma.policyTemplate.create({
+          data: {
+            ...templateData,
+            isBuiltIn: false, // Custom templates are never built-in
+          },
+          include: {
+            organization: {
+              select: { id: true, name: true },
+            },
+          },
+        });
+
+        reply.status(201).send(template);
+      } catch (error) {
+        fastify.log.error('Failed to create policy template', { error, body: request.body });
+        reply.status(500).send({
+          error: 'Failed to create policy template',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  /**
+   * PUT /policy-templates/:id - Update template
+   */
+  fastify.put(
+    '/:id',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' }
+          },
+          required: ['id'],
+          additionalProperties: false
+        },
+        body: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', minLength: 1, maxLength: 100 },
+            description: { type: 'string' },
+            category: { type: 'string', enum: ['access_control', 'data_protection', 'security', 'compliance', 'audit'] },
+            version: { type: 'string' },
+            metadata: { type: 'object' },
+            rules: { type: 'object' },
+            configuration: { type: 'object' }
+          },
+          additionalProperties: false
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              description: { type: 'string' },
+              category: { type: 'string' },
+              isBuiltIn: { type: 'boolean' },
+              version: { type: 'string' },
+              metadata: { type: 'object' },
+              rules: { type: 'object' },
+              configuration: { type: 'object' },
+              createdAt: { type: 'string' },
+              updatedAt: { type: 'string' }
+            },
+            additionalProperties: false
+          }
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+        const updateData = request.body;
+
+        // Check if template exists and is not built-in
+        const existingTemplate = await fastify.prisma.policyTemplate.findUnique({
+          where: { id },
+        });
+
+        if (!existingTemplate) {
+          return reply.status(404).send({
+            error: 'Template not found',
+            message: `Policy template with ID ${id} not found`,
+          });
+        }
+
+        if (existingTemplate.isBuiltIn) {
+          return reply.status(403).send({
+            error: 'Cannot modify built-in template',
+            message: 'Built-in templates cannot be modified. Create a custom template instead.',
+          });
+        }
+
+        // Check for duplicate names if name is being updated
+        if (updateData.name && updateData.name !== existingTemplate.name) {
+          const duplicateTemplate = await fastify.prisma.policyTemplate.findFirst({
+            where: {
+              name: updateData.name,
+              organizationId: existingTemplate.organizationId,
+              id: { not: id },
+            },
+          });
+
+          if (duplicateTemplate) {
+            return reply.status(409).send({
+              error: 'Template name already exists',
+              message: `A template with name '${updateData.name}' already exists in this organization`,
+            });
+          }
+        }
+
+        const template = await fastify.prisma.policyTemplate.update({
+          where: { id },
+          data: {
+            ...updateData,
+            updatedAt: new Date(),
+          },
+          include: {
+            organization: {
+              select: { id: true, name: true },
+            },
+          },
+        });
+
+        reply.send(template);
+      } catch (error) {
+        fastify.log.error('Failed to update policy template', { error, templateId: request.params.id });
+        reply.status(500).send({
+          error: 'Failed to update policy template',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  /**
+   * DELETE /policy-templates/:id - Delete template
+   */
+  fastify.delete(
+    '/:id',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' }
+          },
+          required: ['id'],
+          additionalProperties: false
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+              deletedTemplate: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' }
+                },
+                additionalProperties: false
+              }
+            },
+            additionalProperties: false
+          }
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+
+        // Check if template exists and is not built-in
+        const existingTemplate = await fastify.prisma.policyTemplate.findUnique({
+          where: { id },
+          include: {
+            _count: {
+              select: {
+                simulations: true,
+                deployments: true,
+              },
+            },
+          },
+        });
+
+        if (!existingTemplate) {
+          return reply.status(404).send({
+            error: 'Template not found',
+            message: `Policy template with ID ${id} not found`,
+          });
+        }
+
+        if (existingTemplate.isBuiltIn) {
+          return reply.status(403).send({
+            error: 'Cannot delete built-in template',
+            message: 'Built-in templates cannot be deleted.',
+          });
+        }
+
+        // Check if template has active deployments
+        if (existingTemplate._count.deployments > 0) {
+          return reply.status(409).send({
+            error: 'Template has active deployments',
+            message: 'Cannot delete template that has deployments. Undeploy all instances first.',
+          });
+        }
+
+        // Delete the template (cascade will handle simulations)
+        await fastify.prisma.policyTemplate.delete({
+          where: { id },
+        });
+
+        reply.send({
+          message: 'Policy template deleted successfully',
+          deletedTemplate: {
+            id: existingTemplate.id,
+            name: existingTemplate.name,
+          },
+        });
+      } catch (error) {
+        fastify.log.error('Failed to delete policy template', { error, templateId: request.params.id });
+        reply.status(500).send({
+          error: 'Failed to delete policy template',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  // ============================================================================
+  // SIMULATION ENDPOINTS
+  // ============================================================================
+
+  /**
+   * POST /policy-templates/:id/simulate - Create simulation for template
+   */
+  fastify.post(
+    '/:id/simulate',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' }
+          },
+          required: ['id'],
+          additionalProperties: false
+        },
+        body: {
+          type: 'object',
+          properties: {
+            organizationId: { type: 'string' },
+            name: { type: 'string', minLength: 1, maxLength: 100 },
+            description: { type: 'string' },
+            dataSourceType: { type: 'string', enum: ['historical_replay', 'synthetic_load', 'edge_cases', 'compliance_test'] },
+            configuration: { type: 'object' },
+            startDate: { type: 'string' },
+            endDate: { type: 'string' }
+          },
+          required: ['organizationId', 'name', 'dataSourceType'],
+          additionalProperties: false
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              simulationId: { type: 'string' },
+              status: { type: 'string' },
+              message: { type: 'string' }
+            },
+            additionalProperties: false
+          }
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id: templateId } = request.params;
+        const simulationData = { ...request.body, templateId };
+
+        // Verify template exists
+        const template = await fastify.prisma.policyTemplate.findUnique({
+          where: { id: templateId },
+        });
+
+        if (!template) {
+          return reply.status(404).send({
+            error: 'Template not found',
+            message: `Policy template with ID ${templateId} not found`,
+          });
+        }
+
+        const simulationId = await simulationService.createSimulation(simulationData);
+
+        reply.status(201).send({
+          simulationId,
+          status: 'created',
+          message: 'Simulation created successfully',
+        });
+      } catch (error) {
+        fastify.log.error('Failed to create simulation', { error, templateId: request.params.id });
+        reply.status(500).send({
+          error: 'Failed to create simulation',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /policy-templates/simulations/:simulationId/run - Execute simulation
+   */
+  fastify.post(
+    '/simulations/:simulationId/run',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          properties: {
+            simulationId: { type: 'string' }
+          },
+          required: ['simulationId'],
+          additionalProperties: false
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              simulationId: { type: 'string' },
+              status: { type: 'string' },
+              results: { type: 'object' },
+              executionTime: { type: 'number' }
+            },
+            additionalProperties: false
+          }
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { simulationId } = request.params;
+
+        const result = await simulationService.runSimulation(simulationId);
+
+        reply.send({
+          simulationId,
+          status: 'completed',
+          results: result,
+          executionTime: result.metadata?.executionTime || 0,
+        });
+      } catch (error) {
+        fastify.log.error('Failed to run simulation', { error, simulationId: request.params.simulationId });
+        reply.status(500).send({
+          error: 'Failed to run simulation',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /policy-templates/simulations/:simulationId - Get simulation results
+   */
+  fastify.get(
+    '/simulations/:simulationId',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          properties: {
+            simulationId: { type: 'string' }
+          },
+          required: ['simulationId'],
+          additionalProperties: false
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              simulation: { type: 'object' },
+              results: { type: 'object' },
+              status: { type: 'string' }
+            },
+            additionalProperties: false
+          }
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { simulationId } = request.params;
+
+        const simulation = await fastify.prisma.policySimulation.findUnique({
+          where: { id: simulationId },
+          include: {
+            template: {
+              select: { id: true, name: true, category: true },
+            },
+            organization: {
+              select: { id: true, name: true },
+            },
+          },
+        });
+
+        if (!simulation) {
+          return reply.status(404).send({
+            error: 'Simulation not found',
+            message: `Simulation with ID ${simulationId} not found`,
+          });
+        }
+
+        reply.send({
+          simulation,
+          results: simulation.results,
+          status: simulation.status,
+        });
+      } catch (error) {
+        fastify.log.error('Failed to get simulation', { error, simulationId: request.params.simulationId });
+        reply.status(500).send({
+          error: 'Failed to get simulation',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  // ============================================================================
+  // DEPLOYMENT ENDPOINTS
+  // ============================================================================
+
+  /**
+   * POST /policy-templates/:id/deploy - Deploy template as policy
+   */
+  fastify.post(
+    '/:id/deploy',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' }
+          },
+          required: ['id'],
+          additionalProperties: false
+        },
+        body: {
+          type: 'object',
+          properties: {
+            organizationId: { type: 'string' },
+            environment: { type: 'string', enum: ['development', 'staging', 'production'] },
+            configuration: { type: 'object' },
+            deploymentNotes: { type: 'string' },
+            scheduledAt: { type: 'string' }
+          },
+          required: ['organizationId', 'configuration'],
+          additionalProperties: false
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              deploymentId: { type: 'string' },
+              policyId: { type: 'string' },
+              status: { type: 'string' },
+              message: { type: 'string' }
+            },
+            additionalProperties: false
+          }
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id: templateId } = request.params;
+        const deploymentData = { ...request.body, templateId };
+
+        // Verify template exists
+        const template = await fastify.prisma.policyTemplate.findUnique({
+          where: { id: templateId },
+        });
+
+        if (!template) {
+          return reply.status(404).send({
+            error: 'Template not found',
+            message: `Policy template with ID ${templateId} not found`,
+          });
+        }
+
+        // Create deployment record
+        const deployment = await fastify.prisma.policyDeployment.create({
+          data: {
+            templateId,
+            organizationId: deploymentData.organizationId,
+            environment: deploymentData.environment,
+            configuration: deploymentData.configuration,
+            deploymentNotes: deploymentData.deploymentNotes,
+            scheduledAt: deploymentData.scheduledAt,
+            status: 'pending',
+          },
+        });
+
+        // Create actual policy from template
+        const policy = await fastify.prisma.policy.create({
+          data: {
+            name: `${template.name} (${deploymentData.environment})`,
+            description: `Deployed from template: ${template.name}`,
+            type: template.category,
+            rules: template.rules,
+            organizationId: deploymentData.organizationId,
+            isActive: deploymentData.environment === 'production',
+            enforcementLevel: deploymentData.environment === 'production' ? 'strict' : 'warn',
+            metadata: {
+              templateId: template.id,
+              templateVersion: template.version,
+              deploymentId: deployment.id,
+              environment: deploymentData.environment,
+            },
+          },
+        });
+
+        // Update deployment with policy reference and mark as deployed
+        await fastify.prisma.policyDeployment.update({
+          where: { id: deployment.id },
+          data: {
+            policyId: policy.id,
+            status: 'deployed',
+            deployedAt: new Date(),
+          },
+        });
+
+        reply.status(201).send({
+          deploymentId: deployment.id,
+          policyId: policy.id,
+          status: 'deployed',
+          message: 'Template deployed successfully as policy',
+        });
+      } catch (error) {
+        fastify.log.error('Failed to deploy template', { error, templateId: request.params.id });
+        reply.status(500).send({
+          error: 'Failed to deploy template',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /policy-templates/deployments - List deployments
+   */
+  fastify.get(
+    '/deployments',
+    {
+      schema: {
+        querystring: {
+          type: 'object',
+          properties: {
+            organizationId: { type: 'string' },
+            environment: { type: 'string', enum: ['development', 'staging', 'production'] },
+            status: { type: 'string', enum: ['pending', 'deployed', 'failed', 'retired'] },
+            limit: { type: 'number', minimum: 1, maximum: 100, default: 50 },
+            offset: { type: 'number', minimum: 0, default: 0 }
+          },
+          additionalProperties: false
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              deployments: {
+                type: 'array',
+                items: { type: 'object' }
+              },
+              pagination: {
+                type: 'object',
+                properties: {
+                  total: { type: 'number' },
+                  limit: { type: 'number' },
+                  offset: { type: 'number' },
+                  hasMore: { type: 'boolean' }
+                },
+                additionalProperties: false
+              }
+            },
+            additionalProperties: false
+          }
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { organizationId, environment, status, limit, offset } = request.query;
+
+        const where: any = {};
+        if (organizationId) where.organizationId = organizationId;
+        if (environment) where.environment = environment;
+        if (status) where.status = status;
+
+        const [total, deployments] = await Promise.all([
+          fastify.prisma.policyDeployment.count({ where }),
+          fastify.prisma.policyDeployment.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            skip: offset,
+            take: limit,
+            include: {
+              template: {
+                select: { id: true, name: true, category: true, version: true },
+              },
+              organization: {
+                select: { id: true, name: true },
+              },
+              policy: {
+                select: { id: true, name: true, isActive: true },
+              },
+            },
+          }),
+        ]);
+
+        reply.send({
+          deployments,
+          pagination: {
+            total,
+            limit,
+            offset,
+            hasMore: offset + limit < total,
+          },
+        });
+      } catch (error) {
+        fastify.log.error('Failed to list deployments', { error, query: request.query });
+        reply.status(500).send({
+          error: 'Failed to list deployments',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  );
+};
+
+// Helper function for category descriptions
+function getCategoryDescription(category: string): string {
+  const descriptions: Record<string, string> = {
+    access_control: 'Templates for user access and permission management',
+    data_protection: 'Templates for data privacy and protection compliance',
+    security: 'Templates for security policies and threat prevention',
+    compliance: 'Templates for regulatory compliance and reporting',
+    audit: 'Templates for audit logging and monitoring requirements',
+  };
+  return descriptions[category] || 'Policy template category';
+}
+
+export default policyTemplatesRoutes;

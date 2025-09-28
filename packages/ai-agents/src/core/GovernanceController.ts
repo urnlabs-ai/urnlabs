@@ -188,7 +188,7 @@ export class GovernanceController {
 
     try {
       // Check security clearance levels
-      if (config.securityClearance === 'restricted' && !config.auditRequired) {
+      if (config.securityClearance === 'secret' && !config.auditRequired) {
         errors.push('Agents with restricted security clearance must have audit enabled');
       }
 
@@ -513,7 +513,7 @@ export class GovernanceController {
           violations.push({
             policyId: policy.id,
             ruleId: rule.id,
-            severity: this.determineSeverity(policy.type, rule.action),
+            severity: this.determineSeverity(policy.type, rule.action) as any,
             message: rule.message
           });
         }

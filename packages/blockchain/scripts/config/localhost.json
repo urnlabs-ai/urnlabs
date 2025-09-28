@@ -1,0 +1,42 @@
+{
+  "networkName": "localhost",
+  "chainId": 31337,
+  "contracts": {
+    "uniswapV3Factory": "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+    "uniswapV3PositionManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
+    "uniswapV3SwapRouter": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+    "uniswapV3Quoter": "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6",
+    "weth": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    "usdc": "0xA0b86a33E6441E067036D95f02c39adFf0B3D24D"
+  },
+  "deploymentConfig": {
+    "gasLimit": "8000000",
+    "gasPrice": "20000000000",
+    "confirmations": 1,
+    "timeoutMs": 300000
+  },
+  "yieldFarmConfig": {
+    "baseRewardRate": "1000000000000000000",
+    "maxStakingPeriod": 31536000,
+    "minStakingPeriod": 86400,
+    "stakingMultiplier": 200,
+    "emergencyWithdrawPenalty": 1000
+  },
+  "liquidityManagerConfig": {
+    "maxSlippage": 300,
+    "rebalanceThreshold": 500,
+    "feeThreshold": "1000000000000000000",
+    "maxGasPrice": "100000000000"
+  },
+  "rewardDistributorConfig": {
+    "baseRewardRate": "500000000000000000",
+    "stakingMultiplierBps": 5000,
+    "vestingPeriod": 604800,
+    "maxStakingPeriod": 31536000
+  },
+  "verification": {
+    "enabled": false,
+    "apiUrl": "http://localhost:4000/api/verify",
+    "apiKey": "localhost-verification-key"
+  }
+}

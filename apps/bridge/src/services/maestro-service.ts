@@ -123,7 +123,7 @@ export class MaestroService {
           maestroVersion: response.data.version
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       const duration = Date.now() - startTime
       
       return {
@@ -188,7 +188,7 @@ export class MaestroService {
         status: response.data.status || 'unknown',
         details: response.data
       }
-    } catch (error) {
+    } catch (error: any) {
       return {
         status: 'unhealthy',
         details: { error: error.message }
@@ -248,7 +248,7 @@ export class MaestroService {
           timestamp: new Date().toISOString()
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       const duration = Date.now() - startTime
       
       return {

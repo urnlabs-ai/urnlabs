@@ -1,152 +1,112 @@
-
 {
-  "mcpServers": {
-    "database": {
-      "command": "npx",
-      "args": ["@anthropic-ai/mcp-server-postgres"],
-      "env": {
-        "POSTGRES_CONNECTION_STRING": "postgresql://localhost:5432/urnlabs_dev"
-      }
-    },
-    "github": {
-      "command": "npx",
-      "args": ["@anthropic-ai/mcp-server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-      }
-    },
-    "filesystem": {
-      "command": "npx",
-      "args": ["@anthropic-ai/mcp-server-filesystem"],
-      "env": {
-        "ALLOWED_DIRECTORIES": ["/Users/muhammadusmanramzan/Desktop/work/urnlabs-ai/urnlabs"]
-      }
-    },
-    "slack": {
-      "command": "npx",
-      "args": ["@anthropic-ai/mcp-server-slack"],
-      "env": {
-        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
-        "SLACK_TEAM_ID": "${SLACK_TEAM_ID}"
-      }
-    },
-    "monitoring": {
-      "command": "node",
-      "args": ["./packages/monitoring/src/mcp-server.js"],
-      "env": {
-        "MONITORING_API_KEY": "${MONITORING_API_KEY}"
-      }
-    },
-    "sequential-thinking": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-sequential-thinking"]
-    },
-    "puppeteer": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-puppeteer"]
-    },
-    "memory-bank": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-memory"]
-    },
-    "playwright": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-playwright"]
-    },
-    "knowledge-graph": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-knowledge-graph"]
-    },
-    "duckduckgo": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-duckduckgo"]
-    },
-    "mcp-compass": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-compass"]
-    },
-    "superdesign": {
-      "command": "npx",
-      "args": ["@superdesign/mcp-server"],
-      "env": {
-        "DESIGN_SYSTEM_PATH": "/Users/muhammadusmanramzan/Desktop/work/urnlabs-ai/urnlabs/.superdesign",
-        "COMPONENT_LIBRARY": "shadcn-ui"
-      }
-    },
-    "code-rabbit": {
-      "command": "npx",
-      "args": ["@code-rabbit/mcp-server"],
-      "env": {
-        "AI_MODEL": "claude-3-5-sonnet",
-        "CONTEXT_WINDOW": "200k",
-        "LANGUAGE": "typescript"
-      }
-    },
-    "kilo-code": {
-      "command": "npx",
-      "args": ["@kilo-code/mcp-server"],
-      "env": {
-        "ANALYTICS_ENDPOINT": "${KILO_ANALYTICS_URL}",
-        "PROJECT_ID": "urnlabs",
-        "TECH_STACK": "typescript,react,nodejs"
-      }
-    },
-    "traycer": {
-      "command": "npx",
-      "args": ["@traycer/mcp-server"],
-      "env": {
-        "TRACE_ENDPOINT": "${TRACE_COLLECTOR_URL}",
-        "SERVICE_NAME": "urnlabs-platform"
-      }
-    },
-    "github-copilot": {
-      "command": "npx",
-      "args": ["@github/copilot-mcp-server"],
-      "env": {
-        "COPILOT_API_KEY": "${GITHUB_COPILOT_TOKEN}"
-      }
-    },
-    "gitlens": {
-      "command": "npx",
-      "args": ["@gitkraken/gitlens-mcp-server"],
-      "env": {
-        "GITLENS_API_KEY": "${GITLENS_API_KEY}"
-      }
-    },
-    "prettier": {
-      "command": "npx",
-      "args": ["@prettier/mcp-server"],
-      "env": {
-        "PRETTIER_CONFIG": ".prettierrc"
-      }
-    },
-    "eslint": {
-      "command": "npx",
-      "args": ["@eslint/mcp-server"],
-      "env": {
-        "ESLINT_CONFIG": "eslint.config.js"
-      }
-    },
-    "typescript": {
-      "command": "npx",
-      "args": ["@typescript/mcp-server"],
-      "env": {
-        "TS_CONFIG": "tsconfig.json"
-      }
-    },
-    "tailwind": {
-      "command": "npx",
-      "args": ["@tailwindcss/mcp-server"],
-      "env": {
-        "TAILWIND_CONFIG": "tailwind.config.ts"
-      }
-    },
-    "storybook": {
-      "command": "npx",
-      "args": ["@storybook/mcp-server"],
-      "env": {
-        "STORYBOOK_CONFIG": ".storybook"
-      }
-    }
-  }
+	"mcpServers": {
+		"github": {
+			"type": "stdio",
+			"command": "docker",
+			"args": [
+				"run",
+				"-i",
+				"--rm",
+				"-e",
+				"GITHUB_PERSONAL_ACCESS_TOKEN",
+				"ghcr.io/github/github-mcp-server"
+			],
+			"env": {
+				"GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+			},
+			"description": "GitHub repository management and operations"
+		},
+		"filesystem": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"@modelcontextprotocol/server-filesystem",
+				"/Users/muhammadusmanramzan/Desktop/work/urnlabs-ai/urnlabs"
+			],
+			"env": {},
+			"description": "File system operations for Urnlabs project directory"
+		},
+		"slack": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"@modelcontextprotocol/server-slack"
+			],
+			"env": {
+				"SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
+				"SLACK_TEAM_ID": "${SLACK_TEAM_ID}"
+			},
+			"description": "Slack API operations and team messaging"
+		},
+		"sequential-thinking": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"@modelcontextprotocol/server-sequential-thinking"
+			],
+			"description": "Breaks down complex problems into manageable steps for structured problem-solving"
+		},
+		"puppeteer": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"@hisma/server-puppeteer"
+			],
+			"description": "Navigate websites, take screenshots, interact with web pages using Puppeteer"
+		},
+		"memory-bank": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"@modelcontextprotocol/server-memory"
+			],
+			"description": "Organizes project knowledge hierarchically with persistent memory across sessions"
+		},
+		"superdesign": {
+			"type": "stdio",
+			"command": "node",
+			"args": [
+				"/Users/muhammadusmanramzan/Desktop/work/urnlabs-ai/superdesign-mcp-claude-code/dist/index.js"
+			],
+			"env": {
+				"DESIGN_SYSTEM_PATH": "/Users/muhammadusmanramzan/Desktop/work/urnlabs-ai/urnlabs/.superdesign",
+				"COMPONENT_LIBRARY": "shadcn-ui"
+			},
+			"description": "AI design system and component generation tools"
+		},
+		"shadcn": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"shadcn@latest",
+				"mcp"
+			],
+			"description": "shadcn/ui component library integration and management"
+		},
+		"task-master-ai": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"--package=task-master-ai",
+				"task-master-ai"
+			],
+			"env": {
+				"ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
+				"PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE",
+				"OPENAI_API_KEY": "YOUR_OPENAI_KEY_HERE",
+				"GOOGLE_API_KEY": "YOUR_GOOGLE_KEY_HERE",
+				"XAI_API_KEY": "YOUR_XAI_KEY_HERE",
+				"OPENROUTER_API_KEY": "YOUR_OPENROUTER_KEY_HERE",
+				"MISTRAL_API_KEY": "YOUR_MISTRAL_KEY_HERE",
+				"AZURE_OPENAI_API_KEY": "YOUR_AZURE_KEY_HERE",
+				"OLLAMA_API_KEY": "YOUR_OLLAMA_API_KEY_HERE"
+			}
+		}
+	}
 }
